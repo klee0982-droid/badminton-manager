@@ -28,6 +28,9 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html {
+      touch-action: manipulation; /* 더블탭 줌 방지 */
+    }
 
     body {
       background: var(--bg);
@@ -1349,7 +1352,7 @@
     }
     function renderAttend() {
       var term=norm(byId('attend-search').value);
-      var filtered=members.slice().sort(function(a,b){return b.elo-a.elo;}).filter(function(m){return matchesFn(m,term);});
+      var filtered=members.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ko');}).filter(function(m){return matchesFn(m,term);});
       byId('attend-search-count').textContent=filtered.length+'명';
       renderSelected();
       byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
@@ -1593,12 +1596,12 @@
     }
     function renderManage() {
       var term=norm(byId('member-search').value);
-      var filtered=members.slice().sort(function(a,b){return b.elo-a.elo;}).filter(function(m){return matchesFn(m,term);});
+      var filtered=members.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ko');}).filter(function(m){return matchesFn(m,term);});
       var maxElo=Math.max.apply(null,members.map(function(m){return m.elo;}).concat([1]));
       byId('member-search-count').textContent=filtered.length+'명';
       byId('mlist').innerHTML=filtered.length?filtered.map(function(m){
         var t=getTier(m.elo),pct=Math.round(m.elo/maxElo*100);
-        return '<div class="mrow"><span class="mname">'+esc(m.name)+'</span>'+gBadge(m.gender,isAdmin,m.id)+'<span class="tier" style="background:'+t.bg+';color:'+t.tc+'">'+t.l+'</span><input class="elo-input" type="number" value="'+m.elo+'" min="100" max="3000" data-elo-id="'+m.id+'" '+(isAdmin?'':'disabled')+'/><div class="elo-bar" style="max-width:50px"><div class="elo-fill" style="width:'+pct+'%;background:'+t.tc+'"></div></div><button class="del-btn" data-del="'+m.id+'">×</button></div>';
+        return '<div class="mrow"><span class="mname">'+esc(m.name)+'</span>'+gBadge(m.gender,isAdmin,m.id)+'<span class="tier" style="background:'+t.bg+';color:'+t.tc+'">'+t.l+'</span><input class="elo-input" type="number" value="'+m.elo+'" min="100" max="3000" data-elo-id="'+m.id+'" '+(isAdmin?'':'disabled')+'/><div class="elo-bar"><div class="elo-fill" style="width:'+pct+'%;background:'+t.tc+'"></div></div><button class="del-btn" data-del="'+m.id+'">×</button></div>';
       }).join(''):'<div class="empty">검색 결과 없음</div>';
     }
     async function addMember() {
