@@ -147,7 +147,7 @@
       padding: 16px;
       margin-bottom: 12px;
     }
-    .card-title { font-size: 13px; font-weight: 700; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; font-size: 11px; }
+    .card-title { font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
 
     /* ── Stats ── */
     .stat-row {
@@ -981,7 +981,7 @@
     var present = new Set();
     var courts = [null,null,null,null];
     var waitQueue = [], gameLog = [], eloDeltas = {}, sessionStats = {};
-    var turn = 0, pairingHistory = {};
+    var turn = 0;
     var pausedIds = []; // 휴식 중인 멤버 id 배열
     var currentSessionSaved = false, selectedPlayerId = null;
     var nextMemberId = Math.max.apply(null, members.map(function(m){return m.id;}).concat([0])) + 1;
@@ -1054,7 +1054,7 @@
     async function syncHistory() {
       saveLocal();
       try {
-        var rows = history.map(function(h){ return {club_id:CLUB_ID,session_id:h.id,played_at:h.date,status:h.status,game_count:h.gameCount,participant_count:h.participantCount,payload:{games:h.games||[],deltas:h.deltas||{}}}; });
+        var rows = history.map(function(h){ return {club_id:CLUB_ID,session_id:h.id,played_at:h.date,status:h.status,game_count:h.gameCount,participant_count:h.participantCount,payload:{games:h.games||[],deltas:h.deltas||{},attendees:h.attendees||[]}}; });
         if(!rows.length) return;
         var res = await db.from('badminton_sessions').upsert(rows,{onConflict:'club_id,session_id'});
         if(res.error) throw res.error;
@@ -1072,7 +1072,7 @@
         } else { await syncMembers(); }
         var hr = await db.from('badminton_sessions').select('session_id,played_at,status,game_count,participant_count,payload').eq('club_id',CLUB_ID).order('played_at',{ascending:false}).limit(100);
         if(!hr.error&&hr.data) {
-          history = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{}}; });
+          history = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{},attendees:p.attendees||[]}; });
         }
         saveLocal(); renderAll(); setSyncBadge('연결됨','ok');
         byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;
@@ -1099,7 +1099,7 @@
       if(!requireAdmin()) return;
       activeCourtCount=Math.max(1,Math.min(MAX_COURTS,Number(n)||1));
       localStorage.setItem('bdm_active_court_count',String(activeCourtCount));
-      courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pairingHistory={};
+      courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[];
       byId('play-main').style.display='none'; byId('play-empty').style.display='';
       byId('result-main').style.display='none'; byId('result-empty').style.display='';
       renderCourtConfig(); renderAttend();
@@ -1151,12 +1151,7 @@
         var k=pairKey(a.id,b.id);
         opponentHistory[k]=(opponentHistory[k]||0)+1;
       });});
-      // 기존 pairingHistory도 유지 (Starvation 로직용)
-      var all=teamA.concat(teamB);
-      for(var x=0;x<all.length;x++) for(var y=x+1;y<all.length;y++) {
-        var k=pairKey(all[x].id,all[y].id);
-        pairingHistory[k]=(pairingHistory[k]||0)+1;
-      }
+
     }
 
     function recentPenalty(g) {
@@ -1261,7 +1256,7 @@
       [[[p[0],p[1]],[p[2],p[3]]],[[p[0],p[2]],[p[1],p[3]]],[[p[0],p[3]],[p[1],p[2]]]].forEach(function(x){
         var ta=x[0],tb=x[1];
         var diff=Math.abs((ta[0].elo+ta[1].elo)-(tb[0].elo+tb[1].elo));
-        var rep=(pairingHistory[pairKey(ta[0].id,ta[1].id)]||0)+(pairingHistory[pairKey(tb[0].id,tb[1].id)]||0);
+        var rep=(partnerHistory[pairKey(ta[0].id,ta[1].id)]||0)+(partnerHistory[pairKey(tb[0].id,tb[1].id)]||0);
         // ELO 점수와 성별 tier 분리
         var eloScore = diff + rep*90;
         var score = teamGenderTier(ta,tb) * 1000000 + eloScore;
@@ -1393,7 +1388,7 @@
     function showMsg(msg,type) { var el=byId('attend-alert'); el.className='alert '+(type||'warn'); el.textContent=msg; el.style.display=''; setTimeout(function(){el.style.display='none';},3000); }
     function resetAll() {
       if(!requireAdmin())return;
-      present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pairingHistory={}; pausedIds=[]; currentSessionSaved=false;
+      present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pausedIds=[]; currentSessionSaved=false;
       byId('play-main').style.display='none'; byId('play-empty').style.display='';
       byId('result-main').style.display='none'; byId('result-empty').style.display='';
       renderAll();
@@ -1401,7 +1396,7 @@
     function startGame() {
       if(!requireAdmin())return;
       if(present.size<4){showMsg('최소 4명이 필요합니다.');return;}
-      courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pairingHistory={}; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+      courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
       var pool=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return b.elo-a.elo;});
       ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();
       var cnt=Math.min(activeCourtCount,Math.floor(pool.length/4));
@@ -1816,8 +1811,8 @@
     function copyData() { if(!byId('data-box').value)exportData(); byId('data-box').select(); document.execCommand('copy'); byId('data-msg').textContent='복사 완료.'; }
     function clearHistory() {
       if(!requireAdmin())return;
-      if(!confirm('세션 기록을 삭제할까요?'))return;
-      history=[]; saveLocal(); renderData(); byId('data-msg').textContent='삭제 완료. Supabase는 Table Editor에서 직접 삭제하세요.';
+      history=[]; saveLocal(); renderData();
+      byId('data-msg').textContent='삭제 완료. Supabase는 Table Editor에서 직접 삭제하세요.';
     }
 
     function renderAll() { renderAttend(); renderManage(); renderData(); }
@@ -1880,7 +1875,7 @@
       byId('share-all-btn').addEventListener('click',shareAll);
       byId('copy-btn').addEventListener('click',copyData);
       byId('import-btn').addEventListener('click',importData);
-      byId('clear-history-btn').addEventListener('click',clearHistory);
+      byId('clear-history-btn').addEventListener('click',function(){ if(window.confirm('세션 기록을 모두 삭제할까요?')) clearHistory(); });
     }
 
     bind();
