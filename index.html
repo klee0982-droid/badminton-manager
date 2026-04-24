@@ -596,6 +596,45 @@
     .tier-cell strong { display: block; font-weight: 800; font-size: 12px; }
     .tier-cell span { font-size: 9px; opacity: .75; margin-top: 1px; display: block; }
 
+    /* ── Status board ── */
+    .status-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .status-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 8px;
+      text-align: center;
+    }
+    .status-box .sn { font-size: 22px; font-weight: 900; letter-spacing: -0.04em; }
+    .status-box .sl { font-size: 10px; color: var(--text3); font-weight: 600; margin-top: 2px; }
+    .player-status-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .ps-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .ps-row.playing { background: #c8e6cc; color: #1a5228; }
+    .ps-row.waiting { background: var(--surface2); color: var(--text2); }
+    .ps-row.paused  { background: var(--warn-light); color: var(--warn); }
+    .ps-name { flex: 1; font-weight: 700; }
+    .ps-games { font-size: 11px; font-weight: 600; opacity: .75; }
+    .ps-wait  { font-size: 11px; font-weight: 700; color: var(--danger); }
+    .section-toggle {
+      display: flex; justify-content: space-between; align-items: center;
+      cursor: pointer; user-select: none; margin-bottom: 8px;
+    }
+    .section-toggle .arrow { font-size: 11px; color: var(--text3); transition: transform .2s; }
+    .section-toggle.open .arrow { transform: rotate(180deg); }
+
     /* ── Pause / Resume chips ── */
     .wchip.paused { background: var(--warn-light); color: var(--warn); border-color: #e8d87a; }
     .mini-btn {
@@ -695,16 +734,24 @@
       <div id="play-main" style="display:none">
         <div class="play-grid" id="court-grid"></div>
         <div class="wait-section">
-          <div class="wait-hd">
-            <strong>대기 중</strong>
-            <span class="wait-cnt" id="wait-count-lbl">0명</span>
+          <!-- 요약 통계 -->
+          <div class="status-board">
+            <div class="status-box"><div class="sn" id="sb-playing">0</div><div class="sl">🏸 게임 중</div></div>
+            <div class="status-box"><div class="sn" id="sb-waiting">0</div><div class="sl">⏳ 대기 중</div></div>
+            <div class="status-box"><div class="sn" id="sb-paused">0</div><div class="sl">💤 휴식 중</div></div>
           </div>
-          <div class="wait-chips" id="wait-queue"></div>
-          <div class="queue-note" id="queue-hint"></div>
+          <!-- 대기자 현황 -->
+          <div class="section-toggle open" id="status-toggle">
+            <strong style="font-size:13px;font-weight:700">대기자 현황</strong>
+            <span class="arrow">▼</span>
+          </div>
+          <div id="player-status-list" class="player-status-list"></div>
+          <!-- 휴식 인원 -->
           <div class="paused-section" id="paused-section" style="display:none">
             <div class="paused-label">휴식 중</div>
             <div class="wait-chips" id="paused-list"></div>
           </div>
+          <div class="queue-note" id="queue-hint"></div>
         </div>
         <div class="btn-row">
           <button class="btn ghost" id="back-attend-btn">← 출석 수정</button>
@@ -820,6 +867,15 @@
           <button class="btn danger" id="clear-history-btn" style="font-size:12px;padding:9px 12px">기록 삭제</button>
         </div>
         <textarea class="data-box" id="data-box"></textarea>
+      </div>
+      <div class="card">
+        <div class="card-title">결과 공유</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:500;margin-bottom:10px">최근 세션 결과를 텍스트로 복사해서 카카오톡에 붙여넣으세요.</div>
+        <div class="btn-row" style="margin-bottom:10px;gap:6px">
+          <button class="btn primary" id="share-latest-btn" style="font-size:12px;padding:9px 12px">최근 세션 복사</button>
+          <button class="btn" id="share-all-btn" style="font-size:12px;padding:9px 12px">오늘 전체 복사</button>
+        </div>
+        <textarea class="data-box" id="share-box" placeholder="복사 버튼을 누르면 여기에 공유용 텍스트가 생성됩니다." style="min-height:160px"></textarea>
       </div>
       <div class="card">
         <div class="card-title">세션 기록</div>
@@ -1319,7 +1375,7 @@
         return;
       }
       var aA=avgElo(c.teamA),aB=avgElo(c.teamB),d=c.diff;
-      var dcls=d<=60?'diff-g':d<=130?'diff-m':'diff-b',dlbl=(d<=60?'균형':'d<=130'?'보통':'실력차')+' Δ'+d;
+      var dcls=d<=80?'diff-g':d<=200?'diff-m':'diff-b',dlbl=(d<=80?'균형':d<=200?'보통':'실력차')+' Δ'+d;
       var exp=Math.round(expectedScore(aA,aB)*100);
       el.className='court-card court-'+i;
       el.innerHTML='<div class="court-head"><span class="court-name">'+COURT_NAMES[i]+'</span><span class="diff-tag '+dcls+'">'+dlbl+'</span></div>'+
@@ -1346,26 +1402,50 @@
     }
     function adjustCourtScore(i,side,delta) { var a=parseInt(byId('sa-'+i).value,10)||0,b=parseInt(byId('sb-'+i).value,10)||0; if(side==='a')a+=Number(delta);else b+=Number(delta); setCourtScore(i,a,b); }
     function setWinnerScore(i,side) { side==='a'?setCourtScore(i,21,15):setCourtScore(i,15,21); }
+
     function updateWaitSection() {
-      byId('wait-count-lbl').textContent=waitQueue.length+'명';
-      byId('wait-queue').innerHTML=waitQueue.length?waitQueue.map(function(p){
-        return '<div class="wchip">'+esc(p.name)+'<button class="mini-btn pause" data-pause-wait="'+p.id+'">휴식</button></div>';
-      }).join(''):'<span style="font-size:12px;color:var(--text3)">없음</span>';
-      var cand=selectFairGroup(waitQueue);
-      byId('queue-hint').textContent=waitQueue.length>=4&&cand?'추천: '+cand.map(function(p){return p.name;}).join(', '):'배정까지 '+Math.max(0,4-waitQueue.length)+'명 더 필요';
-      // 휴식 인원
-      var pausedMembers = pausedIds.map(function(id){return members.find(function(m){return m.id===id;});}).filter(Boolean);
-      var pausedSection = byId('paused-section');
-      if(pausedMembers.length){
-        pausedSection.style.display='';
-        byId('paused-list').innerHTML=pausedMembers.map(function(p){
-          return '<div class="wchip paused">'+esc(p.name)+'<button class="mini-btn resume" data-resume="'+p.id+'">복귀</button></div>';
-        }).join('');
-      } else {
-        pausedSection.style.display='none';
-      }
+      // 현재 코트에서 게임 중인 ID 수집
+      var playingIds = new Set();
+      courts.forEach(function(c){ if(c) c.teamA.concat(c.teamB).forEach(function(p){ playingIds.add(p.id); }); });
+
+      // 요약 통계
+      byId('sb-playing').textContent = playingIds.size;
+      byId('sb-waiting').textContent = waitQueue.length;
+      byId('sb-paused').textContent  = pausedIds.length;
+
+      // 전체 현황 리스트 (게임 중 → 대기 → 휴식 순)
+      var playing = members.filter(function(m){ return playingIds.has(m.id); });
+      var waiting = waitQueue.slice();
+      var paused  = pausedIds.map(function(id){ return members.find(function(m){ return m.id===id; }); }).filter(Boolean);
+
+      var rows = '';
+      waiting.forEach(function(p){
+        var played = statOf(p.id).played;
+        var rest   = restScore(p.id);
+        // activeCourtCount 기준: 코트 수보다 많이 쉬었으면 오래 기다린 것
+        var longWait = rest > activeCourtCount + 1;
+        var waitWarn = longWait ? '<span class="ps-wait">오래 대기 중</span>' : '';
+        rows += '<div class="ps-row waiting"><span class="ps-name">'+esc(p.name)+'</span>'+
+          waitWarn+
+          '<span class="ps-games">'+played+'게임 · '+rest+'게임째 대기</span>'+
+          '<button class="mini-btn pause" data-pause-wait="'+p.id+'">휴식</button></div>';
+      });
+      paused.forEach(function(p){
+        var played = statOf(p.id).played;
+        rows += '<div class="ps-row paused"><span class="ps-name">'+esc(p.name)+'</span>'+
+          '<span class="ps-games">'+played+'게임</span>'+
+          '<button class="mini-btn resume" data-resume="'+p.id+'">복귀</button></div>';
+      });
+      byId('player-status-list').innerHTML = rows || '<div style="font-size:12px;color:var(--text3);padding:8px 0">참여자 없음</div>';
+
+      byId('paused-section').style.display = 'none';
+
+      var cand = selectFairGroup(waitQueue);
+      byId('queue-hint').textContent = waitQueue.length>=4&&cand
+        ? '추천: '+cand.map(function(p){return p.name;}).join(', ')
+        : '배정까지 '+Math.max(0,4-waitQueue.length)+'명 더 필요';
     }
-    function renderPlay() {
+        function renderPlay() {
       byId('play-empty').style.display='none'; byId('play-main').style.display='';
       // 슬롯이 없을 때만 생성 (이미 있으면 유지)
       var grid=byId('court-grid');
@@ -1514,6 +1594,72 @@
       var list=byId('history-list'); if(!list)return;
       list.innerHTML=history.length?history.map(function(h){var d=new Date(h.date);return '<div class="hist-row"><div style="flex:1"><div style="font-size:13px;font-weight:700">'+d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+'</div><div style="font-size:11px;color:var(--text3);font-weight:500;margin-top:2px">'+esc(h.status||'저장')+' · '+h.gameCount+'게임 · '+h.participantCount+'명</div></div></div>';}).join(''):'<div class="empty">세션 기록 없음</div>';
     }
+    function buildShareText(sessionList) {
+      if(!sessionList.length) return '공유할 세션 기록이 없습니다.';
+      var lines = [];
+      sessionList.forEach(function(h) {
+        var d = new Date(h.date);
+        var dateStr = d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+
+          d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+        lines.push('🏸 '+dateStr+' 배드민턴 결과');
+        lines.push('총 '+h.gameCount+'게임 · '+h.participantCount+'명 참여');
+        lines.push('');
+        // ELO 변동 상위 5명
+        var deltas = h.deltas || {};
+        var ranked = Object.keys(deltas)
+          .map(function(id){ return {id:Number(id), delta:deltas[id]}; })
+          .filter(function(x){ return x.delta !== 0; })
+          .sort(function(a,b){ return b.delta - a.delta; });
+        if(ranked.length) {
+          lines.push('📊 ELO 변동');
+          ranked.slice(0,5).forEach(function(x, i) {
+            var m = members.find(function(m){ return m.id===x.id; });
+            var name = m ? m.name : 'ID'+x.id;
+            var sign = x.delta > 0 ? '+' : '';
+            var medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ';
+            lines.push(medal+' '+name+' '+sign+x.delta);
+          });
+          lines.push('');
+        }
+        // 게임 기록
+        if(h.games && h.games.length) {
+          lines.push('🎮 게임 기록');
+          h.games.forEach(function(g, i) {
+            var tA = (g.teamA||[]).map(function(p){return p.name;}).join('·');
+            var tB = (g.teamB||[]).map(function(p){return p.name;}).join('·');
+            var score = g.scoreA+':'+g.scoreB;
+            var won = g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':'';
+            lines.push((i+1)+'. '+(won==='A'?'✅':'')+'['+tA+'] '+score+' ['+(won==='B'?'✅':'')+tB+']');
+          });
+        }
+        lines.push('');
+        lines.push('─────────────────');
+        lines.push('');
+      });
+      return lines.join('\n').trim();
+    }
+    function shareLatest() {
+      var latest = history.slice(0,1);
+      var text = buildShareText(latest);
+      byId('share-box').value = text;
+      byId('share-box').select();
+      document.execCommand('copy');
+      showMsg('클립보드에 복사됐어요! 카카오톡에 붙여넣으세요.', 'info');
+    }
+    function shareAll() {
+      // 오늘 날짜 세션만
+      var today = new Date().toDateString();
+      var todaySessions = history.filter(function(h){
+        return new Date(h.date).toDateString() === today;
+      });
+      if(!todaySessions.length) todaySessions = history.slice(0,3);
+      var text = buildShareText(todaySessions);
+      byId('share-box').value = text;
+      byId('share-box').select();
+      document.execCommand('copy');
+      showMsg('클립보드에 복사됐어요! 카카오톡에 붙여넣으세요.', 'info');
+    }
+
     function exportData() { byId('data-box').value=JSON.stringify({version:1,exportedAt:new Date().toISOString(),members:members,history:history},null,2); byId('data-msg').textContent='내보내기 완료.'; }
     function importData() {
       if(!requireAdmin())return;
@@ -1569,11 +1715,20 @@
       byId('start-btn').addEventListener('click',startGame);
       byId('reset-btn').addEventListener('click',resetAll);
       byId('back-attend-btn').addEventListener('click',function(){gotoTab('attend');});
+      byId('status-toggle').addEventListener('click',function(){
+        var list = byId('player-status-list');
+        var toggle = byId('status-toggle');
+        var isOpen = toggle.classList.contains('open');
+        toggle.classList.toggle('open', !isOpen);
+        list.style.display = isOpen ? 'none' : '';
+      });
       byId('finish-btn').addEventListener('click',finishDay);
       byId('apply-btn').addEventListener('click',applyEloAndReset);
       byId('discard-btn').addEventListener('click',discardAndReset);
       byId('add-member-btn').addEventListener('click',addMember);
       byId('export-btn').addEventListener('click',exportData);
+      byId('share-latest-btn').addEventListener('click',shareLatest);
+      byId('share-all-btn').addEventListener('click',shareAll);
       byId('copy-btn').addEventListener('click',copyData);
       byId('import-btn').addEventListener('click',importData);
       byId('clear-history-btn').addEventListener('click',clearHistory);
