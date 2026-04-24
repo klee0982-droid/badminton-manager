@@ -1241,7 +1241,33 @@
       byId('s-total').textContent=n; byId('s-courts').textContent=c;
       byId('s-wait').textContent=Math.max(0,n-c*4); byId('s-games').textContent=gameLog.length;
     }
-    function toggleP(id) { if(!requireAdmin())return; id=Number(id); present.has(id)?present.delete(id):present.add(id); renderAttend(); }
+    function toggleP(id) {
+      if(!requireAdmin()) return;
+      id = Number(id);
+      var gameStarted = byId('play-main') && byId('play-main').style.display !== 'none';
+      if(present.has(id)) {
+        // 출석 취소 - 대기열에서도 제거
+        present.delete(id);
+        waitQueue = waitQueue.filter(function(p){ return p.id !== id; });
+      } else {
+        // 출석 추가
+        present.add(id);
+        // 게임이 이미 시작된 상태면 대기열에 자동 추가
+        if(gameStarted) {
+          var m = members.find(function(x){ return x.id === id; });
+          var inCourt = courts.some(function(c){ return c && c.teamA.concat(c.teamB).some(function(p){ return p.id === id; }); });
+          var inWait = waitQueue.some(function(p){ return p.id === id; });
+          var inPaused = pausedIds.indexOf(id) >= 0;
+          if(m && !inCourt && !inWait && !inPaused) {
+            ensureStats([id]);
+            waitQueue.push(m);
+            showMsg(m.name + ' 대기열에 추가됐어요!', 'info');
+            updateWaitSection();
+          }
+        }
+      }
+      renderAttend();
+    }
     function showMsg(msg,type) { var el=byId('attend-alert'); el.className='alert '+(type||'warn'); el.textContent=msg; el.style.display=''; setTimeout(function(){el.style.display='none';},3000); }
     function resetAll() {
       if(!requireAdmin())return;
