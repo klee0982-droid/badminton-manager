@@ -322,7 +322,7 @@
     }
 
     /* ── Court cards ── */
-    .play-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+    .play-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; max-width: 100%; }
     .court-card {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -364,21 +364,26 @@
     .team-hd.ta { color: var(--accent); }
     .team-hd.tb { color: #185fa5; }
     .team-hd small { font-size: 11px; color: var(--text3); font-weight: 500; }
-    .team-players { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .team-players { display: flex; flex-direction: column; gap: 6px; }
     .ptag {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 800;
-      padding: 10px 8px;
+      padding: 14px 16px;
       border-radius: var(--radius-sm);
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 5px;
-      min-height: 46px;
+      gap: 8px;
+      min-height: 58px;
       letter-spacing: -0.02em;
+      min-width: 0;
+      text-align: center;
     }
-    .ptag.ta { background: var(--accent-light); color: var(--accent); }
-    .ptag.tb { background: #e6f1fb; color: #185fa5; }
+    .ptag-name {
+      white-space: nowrap;
+    }
+    .ptag.ta { background: #c8e6cc; color: #1a5228; }
+    .ptag.tb { background: #c5ddf7; color: #0d3d7a; }
 
     .vs-sep {
       text-align: center;
@@ -604,9 +609,7 @@
     .paused-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 
     /* ── Responsive ── */
-    @media (min-width: 480px) {
-      .play-grid { display: grid; grid-template-columns: 1fr 1fr; }
-    }
+
   </style>
 </head>
 <body>
@@ -663,17 +666,7 @@
         </div>
       </div>
 
-      <div class="config-block">
-        <div class="config-label">매칭 모드</div>
-        <div class="seg-group">
-          <button class="seg active" data-match-mode="open">제한없음</button>
-          <button class="seg" data-match-mode="mix-prefer">혼합우선</button>
-          <button class="seg" data-match-mode="mix-strict">혼합고정</button>
-          <button class="seg" data-match-mode="male">남복</button>
-          <button class="seg" data-match-mode="female">여복</button>
-          <span id="match-mode-hint" style="font-size:11px;color:var(--text3);align-self:center;font-weight:500"></span>
-        </div>
-      </div>
+
 
       <div class="search-wrap">
         <span style="font-size:14px">🔎</span>
@@ -863,7 +856,7 @@
     var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     var isAdmin = sessionStorage.getItem('bdm_admin_ok') === '1';
     var activeCourtCount = Number(localStorage.getItem('bdm_active_court_count') || 1);
-    var matchMode = localStorage.getItem('bdm_match_mode') || 'open';
+    var matchMode = 'mix-prefer'; // 항상 혼합우선 고정
 
     function defaultMembers() {
       return [
@@ -978,10 +971,7 @@
     function renderCourtConfig() {
       activeCourtCount = Math.max(1,Math.min(MAX_COURTS,activeCourtCount));
       document.querySelectorAll('[data-court-count]').forEach(function(btn){ btn.classList.toggle('active',Number(btn.getAttribute('data-court-count'))===activeCourtCount); });
-      document.querySelectorAll('[data-match-mode]').forEach(function(btn){ btn.classList.toggle('active',btn.getAttribute('data-match-mode')===matchMode); });
-      var ml={'open':'제한 없음','mix-prefer':'혼합 우선','mix-strict':'혼합 고정','male':'남복','female':'여복'};
       byId('court-config-hint').textContent = activeCourtCount+'코트';
-      byId('match-mode-hint').textContent = ml[matchMode]||'';
     }
     function setActiveCourtCount(n) {
       if(!requireAdmin()) return;
@@ -992,10 +982,7 @@
       byId('result-main').style.display='none'; byId('result-empty').style.display='';
       renderCourtConfig(); renderAttend();
     }
-    function setMatchMode(mode) {
-      if(!requireAdmin()) return;
-      matchMode=mode; localStorage.setItem('bdm_match_mode',mode); renderCourtConfig();
-    }
+
 
     function avgElo(g) { return Math.round(g.reduce(function(s,p){return s+p.elo;},0)/g.length); }
     function eloRange(g) { return Math.max.apply(null,g.map(function(p){return p.elo;}))-Math.min.apply(null,g.map(function(p){return p.elo;})); }
@@ -1013,26 +1000,99 @@
     function restScore(id) { var s=statOf(id); return s.lastTurn<0?2:Math.max(0,turn-s.lastTurn); }
     function pairKey(a,b) { return [a,b].sort(function(x,y){return x-y;}).join('-'); }
 
-    function genderPenalty(g) {
+    function genderTier(g) {
+      // 성별 구성 우선순위 (숫자 낮을수록 선호)
+      // 0: 남2+여2 (혼복 가능)
+      // 1: 남4 or 여4 (남복/여복)
+      // 2: 남3+여1 or 남1+여3
       var m=g.filter(function(p){return p.gender==='M';}).length, f=g.length-m;
-      if(matchMode==='male') return f>0?500:0;
-      if(matchMode==='female') return m>0?500:0;
-      if(matchMode==='mix-strict') return (m!==2||f!==2)?600:0;
-      if(matchMode==='mix-prefer') return (m===2&&f===2)?-120:80;
-      return 0;
+      if(m===2 && f===2) return 0;
+      if(m===4 || f===4) return 1;
+      return 2;
     }
+    // 파트너/상대 히스토리 별도 관리
+    var partnerHistory = {}; // 같은 팀으로 만난 횟수
+    var opponentHistory = {}; // 상대로 만난 횟수
+
+    function recordPairings(teamA, teamB) {
+      // 파트너 기록
+      for(var i=0;i<teamA.length;i++) for(var j=i+1;j<teamA.length;j++) {
+        var k=pairKey(teamA[i].id,teamA[j].id);
+        partnerHistory[k]=(partnerHistory[k]||0)+1;
+      }
+      for(var i=0;i<teamB.length;i++) for(var j=i+1;j<teamB.length;j++) {
+        var k=pairKey(teamB[i].id,teamB[j].id);
+        partnerHistory[k]=(partnerHistory[k]||0)+1;
+      }
+      // 상대 기록
+      teamA.forEach(function(a){ teamB.forEach(function(b){
+        var k=pairKey(a.id,b.id);
+        opponentHistory[k]=(opponentHistory[k]||0)+1;
+      });});
+      // 기존 pairingHistory도 유지 (Starvation 로직용)
+      var all=teamA.concat(teamB);
+      for(var x=0;x<all.length;x++) for(var y=x+1;y<all.length;y++) {
+        var k=pairKey(all[x].id,all[y].id);
+        pairingHistory[k]=(pairingHistory[k]||0)+1;
+      }
+    }
+
     function recentPenalty(g) {
+      // 최근 게임일수록 강한 페널티 (감쇠 적용)
       var pen=0;
-      gameLog.slice(-2).forEach(function(gl){ var ids=g.map(function(p){return p.id;}),all=(gl.teamA||[]).concat(gl.teamB||[]).map(function(p){return p.id;}),ov=ids.filter(function(id){return all.indexOf(id)>=0;}).length; if(ov>=3)pen+=180; else if(ov===2)pen+=90; });
+      var recent=gameLog.slice().reverse(); // 최신순
+      recent.forEach(function(gl, idx){
+        var decay = 1 / (idx + 1); // 1게임 전=1.0, 2게임 전=0.5, 3게임 전=0.33...
+        var ids=g.map(function(p){return p.id;});
+        var all=(gl.teamA||[]).concat(gl.teamB||[]).map(function(p){return p.id;});
+        var ov=ids.filter(function(id){return all.indexOf(id)>=0;}).length;
+        if(ov>=4) pen += 600 * decay; // 완전히 같은 4명
+        else if(ov>=3) pen += 350 * decay;
+        else if(ov>=2) pen += 150 * decay;
+      });
       return pen;
     }
+
+    function pairingPenalty(g) {
+      // 파트너/상대 히스토리 기반 페널티
+      var pen=0;
+      for(var i=0;i<g.length;i++) for(var j=i+1;j<g.length;j++) {
+        var k=pairKey(g[i].id,g[j].id);
+        var partner=(partnerHistory[k]||0);
+        var opponent=(opponentHistory[k]||0);
+        // 파트너 반복이 상대 반복보다 더 불쾌함
+        pen += partner * 60;
+        pen += opponent * 30;
+      }
+      return pen;
+    }
+
     function scoreGroup(g) {
-      var played=g.map(function(p){return statOf(p.id).played;}),rests=g.map(function(p){return restScore(p.id);}),minP=Math.min.apply(null,played),maxP=Math.max.apply(null,played),range=eloRange(g),avg=avgElo(g),repeat=0;
-      for(var i=0;i<g.length;i++) for(var j=i+1;j<g.length;j++) repeat+=(pairingHistory[pairKey(g[i].id,g[j].id)]||0)*18;
-      var pen=genderPenalty(g)+recentPenalty(g);
-      var beg=g.filter(function(p){return p.elo<BEGINNER_ELO;}).length,adv=g.filter(function(p){return p.elo>=ADVANCED_ELO;}).length;
-      if(beg===1&&adv>=2)pen+=160; if(range>650)pen+=120; if(range>900)pen+=220;
-      return minP*900+maxP*160+range*.55+repeat+pen-rests.reduce(function(s,v){return s+v;},0)*35+Math.abs(avg-1150)*.05;
+      var rests=g.map(function(p){return restScore(p.id);});
+      var range=eloRange(g), avg=avgElo(g);
+
+      // ELO 균형 점수
+      var eloScore = range * 1.2;
+
+      // 실력 격차 심하면 추가 페널티
+      if(range > 500) eloScore += 100;
+      if(range > 800) eloScore += 200;
+
+      // 초보+고수 혼합 페널티
+      var beg=g.filter(function(p){return p.elo<BEGINNER_ELO;}).length;
+      var adv=g.filter(function(p){return p.elo>=ADVANCED_ELO;}).length;
+      if(beg>=1 && adv>=2) eloScore += 150;
+
+      // 휴식 보너스 (오래 쉰 사람 우선)
+      var restBonus = rests.reduce(function(s,v){return s+v;},0) * 40;
+
+      // 평균 ELO가 중간값(1150)에 가까울수록 선호 (극단적 편중 방지)
+      var avgPenalty = Math.abs(avg - 1150) * 0.1;
+
+      var score = eloScore + recentPenalty(g) + pairingPenalty(g) - restBonus + avgPenalty;
+
+      // 성별 tier는 완전히 독립적으로 최우선
+      return genderTier(g) * 10000000 + score;
     }
     function combinations(arr,k) { var out=[]; function rec(s,c){if(c.length===k){out.push(c.slice());return;} for(var i=s;i<=arr.length-(k-c.length);i++){c.push(arr[i]);rec(i+1,c);c.pop();}} rec(0,[]); return out; }
     function selectFairGroup(cands) {
@@ -1058,11 +1118,32 @@
       groups.forEach(function(g){var s=scoreGroup(g);if(s<score){best=g;score=s;}});
       return best;
     }
+    function isMixed(team) {
+      return team[0].gender !== team[1].gender;
+    }
+    function teamGenderTier(ta, tb) {
+      // 팀 배정 성별 우선순위 (낮을수록 선호)
+      // 0: 혼복 vs 혼복
+      // 1: 단성 vs 단성 같은 성별 (남복 vs 남복, 여복 vs 여복)
+      // 2: 혼복 vs 단성
+      // 3: 남남 vs 여여 (최후)
+      var mixA=isMixed(ta), mixB=isMixed(tb);
+      if(mixA && mixB) return 0;
+      if(!mixA && !mixB && ta[0].gender===tb[0].gender) return 1;
+      if(mixA || mixB) return 2;
+      return 3; // 남남 vs 여여
+    }
     function makeAssignment(players) {
-      var p=players.slice().sort(function(a,b){return b.elo-a.elo;}),best=null,bestDiff=Infinity,bestRep=Infinity;
+      var p=players.slice().sort(function(a,b){return b.elo-a.elo;});
+      var best=null, bestScore=Infinity;
       [[[p[0],p[1]],[p[2],p[3]]],[[p[0],p[2]],[p[1],p[3]]],[[p[0],p[3]],[p[1],p[2]]]].forEach(function(x){
-        var ta=x[0],tb=x[1],diff=Math.abs((ta[0].elo+ta[1].elo)-(tb[0].elo+tb[1].elo)),rep=(pairingHistory[pairKey(ta[0].id,ta[1].id)]||0)+(pairingHistory[pairKey(tb[0].id,tb[1].id)]||0);
-        if(diff<bestDiff||(diff===bestDiff&&rep<bestRep)){bestDiff=diff;bestRep=rep;best={teamA:ta,teamB:tb,diff:Math.round(diff/2)};}
+        var ta=x[0],tb=x[1];
+        var diff=Math.abs((ta[0].elo+ta[1].elo)-(tb[0].elo+tb[1].elo));
+        var rep=(pairingHistory[pairKey(ta[0].id,ta[1].id)]||0)+(pairingHistory[pairKey(tb[0].id,tb[1].id)]||0);
+        // ELO 점수와 성별 tier 분리
+        var eloScore = diff + rep*90;
+        var score = teamGenderTier(ta,tb) * 1000000 + eloScore;
+        if(score<bestScore){bestScore=score; best={teamA:ta,teamB:tb,diff:Math.round(diff/2)};}
       });
       return best;
     }
@@ -1121,6 +1202,28 @@
       showMsg(leaving.name+' 휴식 → '+rep.cand.name+' 교체 투입','info');
     }
 
+    function assignSingleCourt(i) {
+      if(!requireAdmin()) return;
+      if(waitQueue.length<4) { showMsg('대기자가 4명 필요합니다.', 'warn'); return; }
+      assignNext(i);
+      renderPlay(); renderAttend();
+      if(courts[i]) showMsg(COURT_NAMES[i]+' 배정 완료', 'info');
+      else showMsg('배정 가능한 조합이 없습니다.', 'warn');
+    }
+    function assignEmptyCourts() {
+      if(!requireAdmin()) return;
+      var assigned = 0;
+      for(var i=0;i<activeCourtCount;i++) {
+        if(!courts[i] && waitQueue.length>=4) {
+          assignNext(i);
+          if(courts[i]) assigned++;
+        }
+      }
+      renderPlay(); renderAttend();
+      if(assigned) showMsg(assigned+'개 코트 배정 완료', 'info');
+      else showMsg('배정 가능한 대기자가 부족합니다.', 'warn');
+    }
+
     function renderSelected() {
       var sel=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
       byId('selected-strip').innerHTML=sel.length?sel.map(function(m){return '<button type="button" class="sel-pill" data-toggle="'+m.id+'">'+esc(m.name)+' ×</button>';}).join(''):'<span style="font-size:12px;color:var(--text3);font-weight:500">선택된 멤버 없음</span>';
@@ -1132,7 +1235,7 @@
       renderSelected();
       byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
         var on=present.has(m.id);
-        return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'">'+'<span><div class="cname">'+esc(m.name)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span>'+'<span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
+        return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'">'+'<span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span>'+'<span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
       }).join(''):'<div class="empty">검색 결과 없음</div>';
       var n=present.size,c=Math.min(activeCourtCount,Math.floor(n/4));
       byId('s-total').textContent=n; byId('s-courts').textContent=c;
@@ -1150,7 +1253,7 @@
     function startGame() {
       if(!requireAdmin())return;
       if(present.size<4){showMsg('최소 4명이 필요합니다.');return;}
-      courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pairingHistory={}; pausedIds=[]; currentSessionSaved=false;
+      courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pairingHistory={}; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
       var pool=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return b.elo-a.elo;});
       ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();
       var cnt=Math.min(activeCourtCount,Math.floor(pool.length/4));
@@ -1164,15 +1267,29 @@
         '<div class="team-hd '+cls+'"><span>'+label+'</span><small>평균 '+avg+'</small></div>'+
         '<div class="team-players">'+players.map(function(p){
           var swapBtn=isAdmin?'<button class="mini-btn swap" data-replace="'+courtIdx+':'+p.id+'">교체</button>':'';
-          return '<div class="ptag '+cls+'" style="justify-content:space-between">'+
-            '<span>'+esc(p.name)+gBadge(p.gender,false)+'</span>'+swapBtn+'</div>';
+          return '<div class="ptag '+cls+'">'+
+            '<span class="ptag-name">'+esc(p.name)+'</span>'+gBadge(p.gender,false)+swapBtn+'</div>';
         }).join('')+'</div></div>';
     }
     function updateCourtCard(i) {
       var c=courts[i],el=byId('court-slot-'+i); if(!el) return;
       if(!c) {
-        el.className='court-card court-'+i+' empty';
-        el.innerHTML='<div class="court-head"><span class="court-name">'+COURT_NAMES[i]+'</span><span style="font-size:11px;color:var(--text3)">비어있음</span></div><div class="court-body" style="text-align:center;padding:24px;font-size:12px;color:var(--text3)">후보 4명 필요</div>';
+        el.className='court-card court-'+i;
+        var canAssign = waitQueue.length>=4;
+        // 팀 블록 크기 그대로 유지하면서 버튼만 바꿔치기
+        var assignBtn = isAdmin && canAssign
+          ? '<button class="btn primary" style="width:100%;font-size:16px;padding:18px;margin-bottom:6px" data-assign-court="'+i+'">다음 게임 배정 →</button>'
+          : '<div style="font-size:13px;color:var(--text3);font-weight:600;text-align:center;padding:12px 0">대기자 '+waitQueue.length+'명 · 4명 필요</div>';
+        // A팀 자리, B팀 자리를 버튼으로 대체 (크기 유지)
+        var teamPlaceholder =
+          '<div class="team-block ta" style="display:flex;align-items:center;justify-content:center;min-height:100px">'+assignBtn+'</div>'+
+          '<div class="vs-sep">-</div>'+
+          '<div class="team-block tb" style="display:flex;align-items:center;justify-content:center;min-height:100px">'+
+            '<div style="font-size:12px;color:var(--text3);font-weight:600;text-align:center">게임 종료</div>'+
+          '</div>';
+        el.innerHTML=
+          '<div class="court-head"><span class="court-name">'+COURT_NAMES[i]+'</span><span style="font-size:11px;color:var(--text3)">대기 중</span></div>'+
+          '<div class="court-body">'+teamPlaceholder+'</div>';
         return;
       }
       var aA=avgElo(c.teamA),aB=avgElo(c.teamB),d=c.diff;
@@ -1224,7 +1341,11 @@
     }
     function renderPlay() {
       byId('play-empty').style.display='none'; byId('play-main').style.display='';
-      byId('court-grid').innerHTML=courts.slice(0,activeCourtCount).map(function(_,i){return '<div id="court-slot-'+i+'"></div>';}).join('');
+      // 슬롯이 없을 때만 생성 (이미 있으면 유지)
+      var grid=byId('court-grid');
+      if(!grid.children.length || grid.children.length!==activeCourtCount) {
+        grid.innerHTML=courts.slice(0,activeCourtCount).map(function(_,i){return '<div id="court-slot-'+i+'"></div>';}).join('');
+      }
       for(var i=0;i<activeCourtCount;i++) updateCourtCard(i);
       updateWaitSection();
     }
@@ -1241,8 +1362,11 @@
       c.teamB.forEach(function(p){eloDeltas[p.id]=(eloDeltas[p.id]||0)+ch.deltaB;});
       var played=c.teamA.concat(c.teamB); turn++;
       played.forEach(function(p){ensureStats([p.id]);sessionStats[p.id].played++;sessionStats[p.id].lastTurn=turn;});
-      for(var x=0;x<played.length;x++) for(var y=x+1;y<played.length;y++){var k=pairKey(played[x].id,played[y].id);pairingHistory[k]=(pairingHistory[k]||0)+1;}
-      waitQueue.push.apply(waitQueue,played); courts[i]=null; assignNext(i); updateCourtCard(i); updateWaitSection(); renderAttend();
+      recordPairings(c.teamA, c.teamB);
+      waitQueue.push.apply(waitQueue,played);
+      // 코트를 빈 상태로 두고 다음 배정은 수동으로
+      courts[i]=null;
+      updateCourtCard(i); updateWaitSection(); renderAttend();
     }
 
     function finishDay() { if(!gameLog.length){showMsg('기록된 게임이 없습니다.','warn');return;} renderResult(); gotoTab('result'); }
@@ -1400,10 +1524,10 @@
       document.querySelector('.tab-bar').addEventListener('click',function(e){var b=e.target.closest('[data-tab]');if(b)gotoTab(b.getAttribute('data-tab'));});
       document.body.addEventListener('click',function(e){
         var cc=e.target.closest('[data-court-count]');if(cc){setActiveCourtCount(cc.getAttribute('data-court-count'));return;}
-        var mm=e.target.closest('[data-match-mode]');if(mm){setMatchMode(mm.getAttribute('data-match-mode'));return;}
         var ps=e.target.closest('[data-player-select]');if(ps){selectPlayer(ps.getAttribute('data-player-select'));return;}
         var gt=e.target.closest('[data-gender-toggle]');if(gt){updateGender(gt.getAttribute('data-gender-toggle'));return;}
         var t=e.target.closest('[data-toggle]');if(t){toggleP(t.getAttribute('data-toggle'));return;}
+        var ac=e.target.closest('[data-assign-court]');if(ac){assignSingleCourt(Number(ac.getAttribute('data-assign-court')));return;}
         var pw=e.target.closest('[data-pause-wait]');if(pw){pauseFromWait(pw.getAttribute('data-pause-wait'));return;}
         var rv=e.target.closest('[data-resume]');if(rv){resumePlayer(rv.getAttribute('data-resume'));return;}
         var rp=e.target.closest('[data-replace]');if(rp){var rArr=rp.getAttribute('data-replace').split(':');replaceFromCourt(Number(rArr[0]),Number(rArr[1]));return;}
