@@ -694,6 +694,7 @@
       <button class="btn primary" type="button" id="admin-login-btn" style="padding:8px 14px;font-size:12px">로그인</button>
       <button class="btn" type="button" id="admin-logout-btn" style="display:none;padding:8px 14px;font-size:12px">로그아웃</button>
       <span class="admin-status" id="admin-status">보기</span>
+      <span id="admin-msg" style="font-size:12px;font-weight:700;display:none;margin-left:4px"></span>
     </div>
 
     <nav class="tab-bar">
@@ -904,6 +905,15 @@
         <textarea class="data-box" id="data-box"></textarea>
       </div>
       <div class="card">
+        <div class="card-title">출석 내보내기</div>
+        <div style="font-size:12px;color:var(--text3);font-weight:500;margin-bottom:10px">세션별 출석 명단을 텍스트로 복사합니다.</div>
+        <div class="btn-row" style="margin-bottom:10px;gap:6px">
+          <button class="btn primary" id="export-attendance-btn" style="font-size:12px;padding:9px 12px">출석 명단 복사</button>
+          <select id="attendance-session-select" style="font-size:12px;padding:8px 10px;flex:1"></select>
+        </div>
+        <textarea class="data-box" id="attendance-box" placeholder="세션을 선택하면 출석 명단이 표시됩니다." style="min-height:120px"></textarea>
+      </div>
+      <div class="card">
         <div class="card-title">결과 공유</div>
         <div style="font-size:12px;color:var(--text3);font-weight:500;margin-bottom:10px">최근 세션 결과를 텍스트로 복사해서 카카오톡에 붙여넣으세요.</div>
         <div class="btn-row" style="margin-bottom:10px;gap:6px">
@@ -1000,12 +1010,30 @@
       byId('admin-logout-btn').style.display = isAdmin ? '' : 'none';
       byId('admin-pin').style.display        = isAdmin ? 'none' : '';
     }
-    function requireAdmin() { if(isAdmin) return true; alert('관리자 PIN이 필요합니다.'); return false; }
+    function requireAdmin() {
+      if(isAdmin) return true;
+      setAdminMsg('관리자 PIN이 필요합니다', 'err');
+      byId('admin-pin') && byId('admin-pin').focus();
+      return false;
+    }
+    function setAdminMsg(msg, type) {
+      var el = byId('admin-msg');
+      if(!el) return;
+      el.textContent = msg;
+      el.style.color = type==='ok' ? 'var(--accent)' : 'var(--danger)';
+      el.style.display = '';
+      if(type==='ok') setTimeout(function(){ el.style.display='none'; }, 2000);
+    }
     function adminLogin() {
       if(byId('admin-pin').value===ADMIN_PIN) {
         isAdmin=true; sessionStorage.setItem('bdm_admin_ok','1'); byId('admin-pin').value='';
-        renderAdmin(); renderManage(); alert('관리자 모드');
-      } else alert('PIN이 틀렸습니다.');
+        renderAdmin(); renderManage();
+        setAdminMsg('관리자 모드 활성화', 'ok');
+      } else {
+        setAdminMsg('PIN이 틀렸습니다', 'err');
+        byId('admin-pin').value='';
+        byId('admin-pin').focus();
+      }
     }
     function adminLogout() { isAdmin=false; sessionStorage.removeItem('bdm_admin_ok'); renderAdmin(); renderManage(); }
 
@@ -1536,7 +1564,20 @@
     function saveSession(status) {
       if(!gameLog.length||currentSessionSaved)return;
       var participants=new Set(); gameLog.forEach(function(g){g.teamA.concat(g.teamB).forEach(function(p){participants.add(p.id);});});
-      history.unshift({id:Date.now(),date:new Date().toISOString(),status:status,games:JSON.parse(JSON.stringify(gameLog)),deltas:Object.assign({},eloDeltas),participantCount:participants.size,gameCount:gameLog.length});
+      // 출석 멤버 전체 저장 (게임 안 한 사람 포함)
+      var attendees = members.filter(function(m){ return present.has(m.id); }).map(function(m){
+        return { id: m.id, name: m.name, elo: m.elo, gender: m.gender };
+      });
+      history.unshift({
+        id: Date.now(),
+        date: new Date().toISOString(),
+        status: status,
+        games: JSON.parse(JSON.stringify(gameLog)),
+        deltas: Object.assign({}, eloDeltas),
+        participantCount: participants.size,
+        gameCount: gameLog.length,
+        attendees: attendees
+      });
       history=history.slice(0,100); currentSessionSaved=true; syncHistory(); renderData();
     }
     async function applyEloAndReset() {
@@ -1629,8 +1670,26 @@
 
     function renderData() {
       if(selectedPlayerId) renderPlayerHistory();
+      renderAttendanceSelect();
       var list=byId('history-list'); if(!list)return;
-      list.innerHTML=history.length?history.map(function(h){var d=new Date(h.date);return '<div class="hist-row"><div style="flex:1"><div style="font-size:13px;font-weight:700">'+d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+'</div><div style="font-size:11px;color:var(--text3);font-weight:500;margin-top:2px">'+esc(h.status||'저장')+' · '+h.gameCount+'게임 · '+h.participantCount+'명</div></div></div>';}).join(''):'<div class="empty">세션 기록 없음</div>';
+      list.innerHTML=history.length?history.map(function(h){
+        var d=new Date(h.date);
+        var attendeeHtml = '';
+        if(h.attendees && h.attendees.length) {
+          attendeeHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+
+            h.attendees.map(function(a){
+              return '<span style="font-size:11px;padding:2px 7px;border-radius:999px;background:var(--surface2);color:var(--text2);font-weight:600">'+esc(a.name)+'</span>';
+            }).join('')+'</div>';
+        }
+        return '<div class="hist-row" style="flex-direction:column;align-items:flex-start;gap:4px">'+
+          '<div style="display:flex;justify-content:space-between;width:100%;align-items:center">'+
+            '<div style="font-size:13px;font-weight:700">'+d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+'</div>'+
+            '<div style="font-size:11px;color:var(--text3);font-weight:500">'+esc(h.status||'저장')+' · '+h.gameCount+'게임</div>'+
+          '</div>'+
+          '<div style="font-size:11px;color:var(--text3);font-weight:500">출석 '+(h.attendees?h.attendees.length:h.participantCount)+'명</div>'+
+          attendeeHtml+
+        '</div>';
+      }).join(''):'<div class="empty">세션 기록 없음</div>';
     }
     function buildShareText(sessionList) {
       if(!sessionList.length) return '공유할 세션 기록이 없습니다.';
@@ -1696,6 +1755,53 @@
       byId('share-box').select();
       document.execCommand('copy');
       showMsg('클립보드에 복사됐어요! 카카오톡에 붙여넣으세요.', 'info');
+    }
+
+    function renderAttendanceSelect() {
+      var sel = byId('attendance-session-select');
+      if(!sel) return;
+      if(!history.length) { sel.innerHTML='<option>세션 없음</option>'; return; }
+      sel.innerHTML = history.map(function(h, i) {
+        var d = new Date(h.date);
+        var label = d.toLocaleDateString('ko-KR') + ' ' +
+          d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) +
+          ' · ' + (h.attendees ? h.attendees.length : h.participantCount) + '명';
+        return '<option value="'+i+'">'+label+'</option>';
+      }).join('');
+      updateAttendanceBox();
+    }
+    function updateAttendanceBox() {
+      var sel = byId('attendance-session-select');
+      var box = byId('attendance-box');
+      if(!sel || !box || !history.length) return;
+      var h = history[Number(sel.value) || 0];
+      if(!h) return;
+      var d = new Date(h.date);
+      var lines = [];
+      lines.push('📋 출석 명단');
+      lines.push(d.toLocaleDateString('ko-KR') + ' ' + d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
+      lines.push('');
+      var attendees = h.attendees || [];
+      if(attendees.length) {
+        // 성별 분류
+        var males   = attendees.filter(function(a){ return a.gender==='M'; });
+        var females = attendees.filter(function(a){ return a.gender==='F'; });
+        lines.push('남자 ('+males.length+'명): '+males.map(function(a){return a.name;}).join(', '));
+        lines.push('여자 ('+females.length+'명): '+females.map(function(a){return a.name;}).join(', '));
+        lines.push('');
+        lines.push('전체 ('+attendees.length+'명): '+attendees.map(function(a){return a.name;}).join(', '));
+      } else {
+        lines.push('출석 데이터 없음 (이전 세션)');
+      }
+      box.value = lines.join('\n');
+    }
+    function exportAttendance() {
+      updateAttendanceBox();
+      var box = byId('attendance-box');
+      if(!box || !box.value) return;
+      box.select();
+      document.execCommand('copy');
+      showMsg('출석 명단이 복사됐어요!', 'info');
     }
 
     function exportData() { byId('data-box').value=JSON.stringify({version:1,exportedAt:new Date().toISOString(),members:members,history:history},null,2); byId('data-msg').textContent='내보내기 완료.'; }
@@ -1765,6 +1871,8 @@
       byId('discard-btn').addEventListener('click',discardAndReset);
       byId('add-member-btn').addEventListener('click',addMember);
       byId('export-btn').addEventListener('click',exportData);
+      byId('export-attendance-btn').addEventListener('click',exportAttendance);
+      byId('attendance-session-select').addEventListener('change',updateAttendanceBox);
       byId('share-latest-btn').addEventListener('click',shareLatest);
       byId('share-all-btn').addEventListener('click',shareAll);
       byId('copy-btn').addEventListener('click',copyData);
