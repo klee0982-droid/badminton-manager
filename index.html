@@ -988,7 +988,7 @@
     function norm(v) { return String(v||'').trim().toLowerCase(); }
     function getTier(e) { for(var i=0;i<TIERS.length;i++) if(e>=TIERS[i].min&&e<=TIERS[i].max) return TIERS[i]; return TIERS[0]; }
     function tierBadge(e) { var t=getTier(e); return '<span class="tier" style="background:'+t.bg+';color:'+t.tc+'">'+t.l+'</span>'; }
-    function getKFactor(e) { if(e<900)return 44; if(e<1100)return 40; if(e<1400)return 32; if(e<1600)return 26; return 22; }
+    function getKFactor(e) { if(e<900)return 28; if(e<1100)return 24; if(e<1400)return 20; if(e<1600)return 16; return 14; }
     function matchesFn(m,term) { return !term||norm(m.name).indexOf(term)>=0||String(m.elo).indexOf(term)>=0||norm(getTier(m.elo).l).indexOf(term)>=0; }
     function gBadge(gender, asBtn, id) {
       var f = gender==='F', cls='gbadge '+(f?'f':'m'), lbl=f?'여':'남';
@@ -1108,7 +1108,7 @@
     function eloRange(g) { return Math.max.apply(null,g.map(function(p){return p.elo;}))-Math.min.apply(null,g.map(function(p){return p.elo;})); }
     function avgK(t) { return Math.round(t.reduce(function(s,p){return s+getKFactor(p.elo);},0)/t.length); }
     function expectedScore(a,b) { return 1/(1+Math.pow(10,(b-a)/400)); }
-    function marginMult(a,b) { return 1+Math.min(0.75,Math.abs(a-b)/21*0.75); }
+    function marginMult(a,b) { return 1+Math.min(0.3,Math.abs(a-b)/21*0.3); }
     function actualScore(a,b) { return a>b?1:a<b?0:0.5; }
     function calcElo(tA,tB,sA,sB) {
       var aA=avgElo(tA),aB=avgElo(tB),eA=expectedScore(aA,aB),margin=marginMult(sA,sB),kA=avgK(tA),kB=avgK(tB),actA=actualScore(sA,sB);
