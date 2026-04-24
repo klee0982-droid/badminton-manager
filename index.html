@@ -47,6 +47,9 @@
       margin: 0 auto;
       padding: 0 0 100px;
     }
+    @media (min-width: 768px) {
+      .app { max-width: 1024px; padding: 0 24px 80px; }
+    }
 
     /* ── Header ── */
     .header {
@@ -322,7 +325,7 @@
     }
 
     /* ── Court cards ── */
-    .play-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; max-width: 100%; }
+    /* .play-grid defined in tablet layout section */
     .court-card {
       background: var(--surface);
       border-radius: var(--radius-lg);
@@ -647,6 +650,30 @@
     .paused-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
     .paused-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 
+    /* ── Play tab layout ── */
+    .play-layout-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .play-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* 태블릿 세로 (768px+): 코트 2열 */
+    @media (min-width: 768px) {
+      .app { max-width: 100%; padding-left: 20px; padding-right: 20px; }
+      .play-grid.multi { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    }
+
+    /* 태블릿 가로 (1024px+): 코트 3열 */
+    @media (min-width: 1024px) {
+      .play-grid.multi { grid-template-columns: repeat(3, 1fr); }
+      .play-grid.multi-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+
     /* ── Responsive ── */
 
   </style>
@@ -732,6 +759,7 @@
       </div>
       <div id="play-empty" class="alert info">출석에서 멤버를 선택하고 게임을 시작해주세요.</div>
       <div id="play-main" style="display:none">
+        <div class="play-layout-wrap">
         <div class="play-grid" id="court-grid"></div>
         <div class="wait-section">
           <!-- 요약 통계 -->
@@ -753,6 +781,7 @@
           </div>
           <div class="queue-note" id="queue-hint"></div>
         </div>
+        </div><!-- /play-layout-wrap -->
         <div class="btn-row">
           <button class="btn ghost" id="back-attend-btn">← 출석 수정</button>
           <button class="btn primary" id="finish-btn" style="flex:1">종료 & 결과 →</button>
@@ -773,14 +802,16 @@
           <div class="result-sub" id="r-sub"></div>
         </div>
         <div class="result-grid" id="r-stats"></div>
-        <div class="card">
-          <div class="card-title">ELO 변동</div>
-          <div id="r-rankings"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">게임 기록</div>
-          <div id="r-games"></div>
-        </div>
+        <div class="result-two-col">
+          <div class="card">
+            <div class="card-title">ELO 변동</div>
+            <div id="r-rankings"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">게임 기록</div>
+            <div id="r-games"></div>
+          </div>
+        </div><!-- /result-two-col -->
         <div class="btn-row">
           <button class="btn primary big" id="apply-btn">ELO 반영 & 저장 →</button>
           <button class="btn" id="discard-btn" style="padding:15px 14px;font-size:12px">저장만</button>
@@ -794,6 +825,8 @@
         <div class="section-title">멤버 관리</div>
         <div class="section-desc">멤버 추가 및 ELO · 성별 수정</div>
       </div>
+      <div class="member-manage-grid">
+      <div>
       <div class="card">
         <div class="card-title">새 멤버 추가</div>
         <div class="form-row"><label class="form-label">이름</label><input type="text" id="n-name" placeholder="이름" style="width:130px" /></div>
@@ -805,6 +838,7 @@
         <div class="card-title">등급 기준</div>
         <div class="tier-grid" id="tier-guide"></div>
       </div>
+      </div><!-- /left col -->
       <div class="card">
         <div class="card-title">전체 멤버</div>
         <div class="search-wrap" style="margin-bottom:10px">
@@ -814,6 +848,7 @@
         </div>
         <div id="mlist"></div>
       </div>
+      </div><!-- /member-manage-grid -->
     </section>
 
     <!-- 내기록 -->
@@ -1452,6 +1487,9 @@
       if(!grid.children.length || grid.children.length!==activeCourtCount) {
         grid.innerHTML=courts.slice(0,activeCourtCount).map(function(_,i){return '<div id="court-slot-'+i+'"></div>';}).join('');
       }
+      // 코트 수에 따라 그리드 클래스 적용
+      grid.classList.toggle('multi', activeCourtCount >= 2);
+      grid.classList.toggle('multi-4', activeCourtCount === 4);
       for(var i=0;i<activeCourtCount;i++) updateCourtCard(i);
       updateWaitSection();
     }
