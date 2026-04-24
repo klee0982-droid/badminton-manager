@@ -653,6 +653,19 @@
     .paused-section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
     .paused-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
 
+    /* ── Result two-col layout (tablet) ── */
+    .result-two-col { display: flex; flex-direction: column; gap: 0; }
+    @media (min-width: 768px) {
+      .result-two-col { flex-direction: row; gap: 12px; }
+      .result-two-col .card { flex: 1; margin-bottom: 0; }
+    }
+
+    /* ── Member manage grid (tablet) ── */
+    .member-manage-grid { display: flex; flex-direction: column; gap: 0; }
+    @media (min-width: 768px) {
+      .member-manage-grid { display: grid; grid-template-columns: 280px 1fr; gap: 12px; align-items: start; }
+    }
+
     /* ── Play tab layout ── */
     .play-layout-wrap {
       display: flex;
@@ -960,7 +973,6 @@
     var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     var isAdmin = sessionStorage.getItem('bdm_admin_ok') === '1';
     var activeCourtCount = Number(localStorage.getItem('bdm_active_court_count') || 1);
-    var matchMode = 'mix-prefer'; // 항상 혼합우선 고정
 
     function defaultMembers() {
       return [
@@ -1327,19 +1339,6 @@
       if(courts[i]) showMsg(COURT_NAMES[i]+' 배정 완료', 'info');
       else showMsg('배정 가능한 조합이 없습니다.', 'warn');
     }
-    function assignEmptyCourts() {
-      if(!requireAdmin()) return;
-      var assigned = 0;
-      for(var i=0;i<activeCourtCount;i++) {
-        if(!courts[i] && waitQueue.length>=4) {
-          assignNext(i);
-          if(courts[i]) assigned++;
-        }
-      }
-      renderPlay(); renderAttend();
-      if(assigned) showMsg(assigned+'개 코트 배정 완료', 'info');
-      else showMsg('배정 가능한 대기자가 부족합니다.', 'warn');
-    }
 
     function renderSelected() {
       var sel=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
@@ -1388,7 +1387,7 @@
     function showMsg(msg,type) { var el=byId('attend-alert'); el.className='alert '+(type||'warn'); el.textContent=msg; el.style.display=''; setTimeout(function(){el.style.display='none';},3000); }
     function resetAll() {
       if(!requireAdmin())return;
-      present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; pausedIds=[]; currentSessionSaved=false;
+      present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
       byId('play-main').style.display='none'; byId('play-empty').style.display='';
       byId('result-main').style.display='none'; byId('result-empty').style.display='';
       renderAll();
@@ -1475,7 +1474,6 @@
       byId('sb-paused').textContent  = pausedIds.length;
 
       // 전체 현황 리스트 (게임 중 → 대기 → 휴식 순)
-      var playing = members.filter(function(m){ return playingIds.has(m.id); });
       var waiting = waitQueue.slice();
       var paused  = pausedIds.map(function(id){ return members.find(function(m){ return m.id===id; }); }).filter(Boolean);
 
