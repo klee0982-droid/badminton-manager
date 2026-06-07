@@ -49,10 +49,11 @@ function setActiveCourtCount(n) {
 
 // ── 탭 이동 ──
 function gotoTab(tab) {
-  ['attend','play','result','members','player','data'].forEach(function(id){ byId('tab-'+id).classList.toggle('active',id===tab); });
+  ['attend','live','play','result','members','player','data'].forEach(function(id){ byId('tab-'+id).classList.toggle('active',id===tab); });
   document.querySelectorAll('.tab').forEach(function(btn){ btn.classList.toggle('active',btn.getAttribute('data-tab')===tab); });
   if(tab==='data') renderData();
   if(tab==='player') renderPlayerSearch();
+  if(tab==='live') startLivePolling(); else stopLivePolling();
 }
 
 // ── 출석 ──
@@ -101,6 +102,65 @@ function toggleP(id) {
   }
   renderAttend();
 }
+
+// ── 현황 (읽기 전용) ──
+function renderLiveView(state) {
+  var el = byId('live-courts'); if(!el) return;
+  var updEl = byId('live-updated');
+  if(!state || (!state.courts.some(function(c){return c;}) && !state.waitQueue.length)) {
+    el.innerHTML = '<div style="text-align:center;padding:48px 16px;color:var(--text3);font-size:14px;font-weight:500">⏸ 현재 진행 중인 게임이 없어요</div>';
+    if(updEl) updEl.textContent = '';
+    return;
+  }
+  var term = (byId('live-search')||{value:''}).value.trim().toLowerCase();
+  function hi(name) {
+    var matched = term && name.toLowerCase().indexOf(term) >= 0;
+    return matched
+      ? '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:20px;font-weight:700">'+esc(name)+' 👈</span>'
+      : '<span style="padding:2px 8px">'+esc(name)+'</span>';
+  }
+  var html = '';
+  var COURT_NAMES = ['1코트','2코트','3코트','4코트'];
+  state.courts.forEach(function(c, i) {
+    if(!c) return;
+    html += '<div class="card" style="margin-bottom:12px">' +
+      '<div style="font-size:13px;font-weight:800;color:var(--accent);margin-bottom:10px">🏸 '+COURT_NAMES[i]+'</div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+        '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px 12px">' +
+          '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">A팀</div>' +
+          '<div style="font-size:14px;font-weight:600;line-height:1.8">'+c.teamA.map(function(p){return hi(p.name);}).join('<br>')+'</div>' +
+        '</div>' +
+        '<div style="font-size:18px;font-weight:800;color:var(--text3)">vs</div>' +
+        '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px 12px">' +
+          '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">B팀</div>' +
+          '<div style="font-size:14px;font-weight:600;line-height:1.8">'+c.teamB.map(function(p){return hi(p.name);}).join('<br>')+'</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  });
+  if(state.waitQueue && state.waitQueue.length) {
+    html += '<div class="card">' +
+      '<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">⏳ 대기 중 ('+state.waitQueue.length+'명)</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        state.waitQueue.map(function(p, idx){
+          var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
+          return '<span style="'+(matched?'background:var(--accent);color:#fff;':'background:var(--surface2);color:var(--text);')+'padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600">'+(idx+1)+'. '+esc(p.name)+(matched?' 👈':'')+'</span>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+  }
+  el.innerHTML = html;
+  if(updEl) {
+    var d = new Date(state.updatedAt);
+    updEl.textContent = '마지막 업데이트: '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
+  }
+}
+// 검색 이벤트는 한 번만 바인딩 (최신 state는 supabase.js의 _lastLiveState 참조)
+(function() {
+  var el = byId('live-search'); if(!el || el._liveBound) return;
+  el._liveBound = true;
+  el.addEventListener('input', function(){ if(typeof _lastLiveState!=='undefined') renderLiveView(_lastLiveState); });
+})();
 
 // ── 게임 진행 ──
 function renderTeam(label,players,side,avg,courtIdx) {

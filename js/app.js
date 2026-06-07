@@ -79,7 +79,7 @@ function assignSingleCourt(i) {
   if(waitQueue.length<4) { showMsg('대기자가 4명 필요합니다.', 'warn'); return; }
   assignNext(i);
   renderPlay(); renderAttend();
-  if(courts[i]) showMsg(COURT_NAMES[i]+' 배정 완료', 'info');
+  if(courts[i]) { showMsg(COURT_NAMES[i]+' 배정 완료', 'info'); saveGameState(); }
   else showMsg('배정 가능한 조합이 없습니다.', 'warn');
 }
 
@@ -89,7 +89,7 @@ function resetAll() {
   present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
-  renderAll();
+  renderAll(); saveGameState();
 }
 function startGame() {
   if(!requireAdmin())return;
@@ -99,7 +99,7 @@ function startGame() {
   ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();
   var cnt=Math.min(activeCourtCount,Math.floor(pool.length/4));
   for(var i=0;i<cnt;i++) assignNext(i);
-  renderPlay(); renderAttend(); gotoTab('play');
+  renderPlay(); renderAttend(); gotoTab('play'); saveGameState();
 }
 function courtFinished(i) {
   if(!requireAdmin())return;
@@ -117,7 +117,7 @@ function courtFinished(i) {
   recordPairings(c.teamA, c.teamB);
   waitQueue.push.apply(waitQueue,played);
   courts[i]=null;
-  updateCourtCard(i); updateWaitSection(); renderAttend();
+  updateCourtCard(i); updateWaitSection(); renderAttend(); saveGameState();
 }
 function finishDay() {
   if(!gameLog.length){showMsg('기록된 게임이 없습니다.','warn');return;}

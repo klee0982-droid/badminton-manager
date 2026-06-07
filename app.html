@@ -58,6 +58,7 @@
 
     <nav class="tab-bar">
       <button class="tab active" data-tab="attend">출석</button>
+      <button class="tab" data-tab="live">현황</button>
       <button class="tab" data-tab="play">진행</button>
       <button class="tab" data-tab="result">결과</button>
       <button class="tab" data-tab="members">멤버</button>
@@ -100,6 +101,23 @@
           <button class="btn primary big" id="start-btn">게임 시작 →</button>
           <button class="btn" id="reset-btn" style="padding:15px 16px">초기화</button>
         </div>
+      </div>
+    </section>
+
+    <!-- 현황 (멤버용 읽기 전용) -->
+    <section id="tab-live" class="section">
+      <div class="section-header">
+        <div class="section-title">지금 현황</div>
+        <div class="section-desc">코트 배정과 대기 순서를 확인하세요</div>
+      </div>
+      <div class="search-wrap" style="margin-bottom:16px">
+        <span style="font-size:14px">🔎</span>
+        <input type="text" id="live-search" placeholder="내 이름 검색" />
+      </div>
+      <div id="live-courts"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+        <span id="live-updated" style="font-size:11px;color:var(--text3);font-weight:500"></span>
+        <button onclick="refreshLive()" style="font-size:12px;color:var(--accent);font-weight:600;background:none;border:none;cursor:pointer;padding:4px 0">새로고침</button>
       </div>
     </section>
 
