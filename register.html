@@ -187,7 +187,7 @@
     // Step 1 → Step 2
     regBtn.addEventListener('click', function() {
       document.getElementById('confirm-name').textContent = nameEl.value.trim();
-      var appUrl = window.location.origin + '/app?club=' + idEl.value;
+      var appUrl = window.location.origin + '/' + idEl.value;
       document.getElementById('confirm-url').textContent = appUrl;
       document.getElementById('confirm-pin').textContent = '●'.repeat(pinEl.value.length);
       showStep(2);
@@ -207,7 +207,7 @@
           plan: 'free'
         });
         if(res.error) throw res.error;
-        var appUrl = window.location.origin + '/app?club=' + idEl.value;
+        var appUrl = window.location.origin + '/' + idEl.value;
         document.getElementById('success-msg').textContent =
           '"' + nameEl.value.trim() + '" 동호회가 등록됐어요!\n아래 링크를 복사해서 멤버들에게 공유하세요.';
         document.getElementById('success-url').textContent = appUrl;

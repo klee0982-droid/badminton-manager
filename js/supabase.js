@@ -31,6 +31,19 @@ async function syncHistory() {
 async function loadFromSupabase() {
   setSyncBadge('동기화 중','warn');
   try {
+    // 클럽 정보 먼저 로드 (PIN 포함)
+    var cr = await db.from('clubs').select('name,admin_pin').eq('club_id',CLUB_ID).maybeSingle();
+    if(cr.error) throw cr.error;
+    if(!cr.data) {
+      setSyncBadge('오류','bad');
+      byId('data-msg').textContent = '동호회를 찾을 수 없어요. ID를 확인해주세요.';
+      return;
+    }
+    ADMIN_PIN = cr.data.admin_pin;
+    // 헤더 타이틀 업데이트
+    var titleEl = document.querySelector('.header-title');
+    if(titleEl) titleEl.textContent = cr.data.name;
+    document.title = cr.data.name + ' · 배드민턴 매니저';
     var mr = await db.from('badminton_members').select('member_id,name,elo,gender').eq('club_id',CLUB_ID).order('elo',{ascending:false});
     if(mr.error) throw mr.error;
     if(mr.data&&mr.data.length) {

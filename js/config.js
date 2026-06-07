@@ -1,7 +1,7 @@
 var SUPABASE_URL = 'https://hvvxequwyjqbgxmnavbz.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_1Tmj2oW-SGR5KcnVbbq-iA_JEW_QmPb';
-var CLUB_ID      = new URLSearchParams(window.location.search).get('club') || 'kp-badminton';
-var ADMIN_PIN    = '248613';
+var CLUB_ID      = new URLSearchParams(window.location.search).get('club') || '';
+var ADMIN_PIN    = ''; // clubs 테이블에서 로드됨
 var STORAGE_KEY  = 'bdm_members_backup';
 var HISTORY_KEY  = 'bdm_history_backup';
 var COURT_NAMES  = ['코트 1', '코트 2', '코트 3', '코트 4'];
