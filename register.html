@@ -118,7 +118,7 @@
       <div class="url-box" id="success-url"></div>
       <button class="copy-btn" id="copy-url-btn">🔗 링크 복사</button>
       <button class="copy-btn" id="email-btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)">📧 이메일로 저장하기</button>
-      <button class="go-btn" id="go-app-btn">앱 바로 가기 →</button>
+      <button class="go-btn" id="go-app-btn">앱 바로 가기 → <span id="go-countdown"></span></button>
     </div>
 
     <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text3)">
@@ -247,6 +247,15 @@
           window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
         };
         showStep(3);
+        // 3초 후 자동 이동
+        var countdown = 3;
+        var countEl = document.getElementById('go-countdown');
+        countEl.textContent = '(' + countdown + ')';
+        var timer = setInterval(function() {
+          countdown--;
+          if(countdown <= 0) { clearInterval(timer); window.location.href = appUrl; }
+          else countEl.textContent = '(' + countdown + ')';
+        }, 1000);
       } catch(e) {
         btn.disabled = false; btn.textContent = '등록 완료 🎉';
         alert('등록 실패: ' + (e.message || '다시 시도해주세요'));

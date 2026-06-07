@@ -66,10 +66,20 @@ function renderAttend() {
   var filtered=members.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ko');}).filter(function(m){return matchesFn(m,term);});
   byId('attend-search-count').textContent=filtered.length+'명';
   renderSelected();
-  byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
-    var on=present.has(m.id);
-    return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
-  }).join(''):'<div class="empty">검색 결과 없음</div>';
+  if(members.length===0) {
+    byId('mgrid').innerHTML=
+      '<div style="text-align:center;padding:40px 16px">' +
+        '<div style="font-size:48px;margin-bottom:16px">🏸</div>' +
+        '<div style="font-size:17px;font-weight:800;margin-bottom:8px">멤버가 없어요</div>' +
+        '<div style="font-size:13px;color:var(--text3);font-weight:500;margin-bottom:24px;line-height:1.6">먼저 멤버 탭에서 함께 칠 멤버를<br>추가해주세요</div>' +
+        '<button onclick="gotoTab(\'members\')" style="padding:13px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">멤버 추가하기 →</button>' +
+      '</div>';
+  } else {
+    byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
+      var on=present.has(m.id);
+      return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
+    }).join(''):'<div class="empty">검색 결과 없음</div>';
+  }
   var n=present.size,c=Math.min(activeCourtCount,Math.floor(n/4));
   byId('s-total').textContent=n; byId('s-courts').textContent=c;
   byId('s-wait').textContent=Math.max(0,n-c*4); byId('s-games').textContent=gameLog.length;
