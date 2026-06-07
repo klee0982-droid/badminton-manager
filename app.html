@@ -28,6 +28,34 @@
     </div>
   </div>
 
+  <!-- 시합 점수 입력 팝업 -->
+  <div class="swap-overlay" id="score-overlay" style="display:none" onclick="if(event.target===this)closeScoreInput()">
+    <div class="swap-sheet" style="padding:24px 20px 32px">
+      <div class="swap-title" id="score-match-title">점수 입력</div>
+      <div style="display:flex;align-items:center;gap:10px;margin:20px 0">
+        <div style="flex:1;text-align:center">
+          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px" id="score-team1-name"></div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="adjustTourneyScore(1,-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+            <input id="score-t1" type="number" min="0" max="99" value="0" style="width:56px;text-align:center;font-size:28px;font-weight:800;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 4px;font-family:inherit;color:var(--text);background:var(--surface)" />
+            <button onclick="adjustTourneyScore(1,1)" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+        </div>
+        <div style="font-size:16px;font-weight:800;color:var(--text3)">vs</div>
+        <div style="flex:1;text-align:center">
+          <div style="font-size:13px;font-weight:700;color:var(--text2);margin-bottom:8px" id="score-team2-name"></div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+            <button onclick="adjustTourneyScore(2,-1)" style="width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border);background:var(--surface2);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">−</button>
+            <input id="score-t2" type="number" min="0" max="99" value="0" style="width:56px;text-align:center;font-size:28px;font-weight:800;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:6px 4px;font-family:inherit;color:var(--text);background:var(--surface)" />
+            <button onclick="adjustTourneyScore(2,1)" style="width:36px;height:36px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center">+</button>
+          </div>
+        </div>
+      </div>
+      <button id="score-confirm-btn" style="width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">기록하기</button>
+      <button onclick="closeScoreInput()" style="width:100%;padding:12px;background:none;color:var(--text3);border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">취소</button>
+    </div>
+  </div>
+
   <!-- 공유 팝업 -->
   <div class="swap-overlay" id="share-overlay" style="display:none" onclick="if(event.target===this)closeShare()">
     <div class="swap-sheet" style="padding:24px 20px 32px">

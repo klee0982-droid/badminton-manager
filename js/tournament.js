@@ -104,16 +104,48 @@ function startTourney() {
   renderTourneySection();
 }
 
+var _pendingWin = null; // {tId, ri, mi, side}
+
 function recordWin(tId, ri, mi, side) {
   var t = tourneys.find(function(x){ return x.id === tId; });
   if(!t || t.status === 'done') return;
   var m = t.rounds[ri][mi];
   if(!m || m.winner !== null) return;
-  var score = prompt('점수를 입력하세요 (선택, 예: 21-15):', '');
-  if(score === null) return;
-  m.winner = side;
-  m.score = score.trim();
-  var round = t.rounds[ri];
+  _pendingWin = { tId: tId, ri: ri, mi: mi, side: side };
+  var winTeam  = side === 1 ? m.t1 : m.t2;
+  var loseTeam = side === 1 ? m.t2 : m.t1;
+  byId('score-match-title').textContent = roundName(t, ri);
+  byId('score-team1-name').textContent = tLabel(winTeam,  t.type).replace(/<[^>]+>/g,'') + ' (승)';
+  byId('score-team2-name').textContent = tLabel(loseTeam, t.type).replace(/<[^>]+>/g,'') + ' (패)';
+  byId('score-t1').value = 21;
+  byId('score-t2').value = 0;
+  byId('score-confirm-btn').onclick = confirmTourneyScore;
+  byId('score-overlay').style.display = 'flex';
+}
+
+function adjustTourneyScore(team, delta) {
+  var el = byId('score-t' + team);
+  el.value = Math.max(0, Math.min(99, (Number(el.value) || 0) + delta));
+}
+
+function closeScoreInput() {
+  byId('score-overlay').style.display = 'none';
+  _pendingWin = null;
+}
+
+function confirmTourneyScore() {
+  if(!_pendingWin) return;
+  var s1 = Number(byId('score-t1').value) || 0;
+  var s2 = Number(byId('score-t2').value) || 0;
+  var score = s1 + '-' + s2;
+  var p = _pendingWin;
+  closeScoreInput();
+  var t = tourneys.find(function(x){ return x.id === p.tId; });
+  if(!t) return;
+  var m = t.rounds[p.ri][p.mi];
+  m.winner = p.side;
+  m.score = score;
+  var round = t.rounds[p.ri];
   if(round.every(function(m){ return m.winner !== null; })) {
     var next = buildNextRound(round);
     if(!next) finalizeChampion(t);
