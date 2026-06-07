@@ -117,6 +117,7 @@
       <div class="success-sub" id="success-msg"></div>
       <div class="url-box" id="success-url"></div>
       <button class="copy-btn" id="copy-url-btn">🔗 링크 복사</button>
+      <button class="copy-btn" id="email-btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)">📧 이메일로 저장하기</button>
       <button class="go-btn" id="go-app-btn">앱 바로 가기 →</button>
     </div>
 
@@ -217,6 +218,18 @@
             document.getElementById('copy-url-btn').textContent = '✓ 복사됐어요!';
             setTimeout(function(){ document.getElementById('copy-url-btn').textContent = '🔗 링크 복사'; }, 2000);
           });
+        };
+        document.getElementById('email-btn').onclick = function(){
+          var clubName = nameEl.value.trim();
+          var pin = pinEl.value;
+          var subject = encodeURIComponent('[배드민턴 매니저] ' + clubName + ' 접속 정보');
+          var body = encodeURIComponent(
+            '동호회명: ' + clubName + '\n' +
+            '앱 주소: ' + appUrl + '\n' +
+            '관리자 PIN: ' + pin + '\n\n' +
+            '이 링크를 즐겨찾기에 추가하거나 카카오톡에 공유하세요.'
+          );
+          window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
         };
         showStep(3);
       } catch(e) {

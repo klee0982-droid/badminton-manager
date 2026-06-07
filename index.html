@@ -77,8 +77,8 @@
   <div class="search-section">
     <div class="search-title">이미 등록된 동호회라면</div>
     <div class="search-row">
-      <input type="text" class="search-input" id="club-search-input" placeholder="동호회 ID 입력 (예: kp-badminton)" />
-      <button class="search-btn" id="club-search-btn">접속 →</button>
+      <input type="text" class="search-input" id="club-search-input" placeholder="동호회 이름 또는 ID 검색" />
+      <button class="search-btn" id="club-search-btn">검색</button>
     </div>
     <div class="search-result" id="search-result"></div>
   </div>
@@ -121,17 +121,26 @@
     var SUPABASE_KEY = 'sb_publishable_1Tmj2oW-SGR5KcnVbbq-iA_JEW_QmPb';
     var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     document.getElementById('club-search-btn').addEventListener('click', async function() {
-      var id = document.getElementById('club-search-input').value.trim();
-      if(!id) return;
+      var q = document.getElementById('club-search-input').value.trim();
+      if(!q) return;
       var result = document.getElementById('search-result');
       result.textContent = '검색 중...'; result.style.color = 'var(--text3)';
-      var res = await db.from('clubs').select('club_id,name').eq('club_id', id).maybeSingle();
+      // ID로 먼저 시도, 없으면 이름으로 검색
+      var res = await db.from('clubs').select('club_id,name').eq('club_id', q).maybeSingle();
       if(res.data) {
-        result.innerHTML = '✓ <strong>'+res.data.name+'</strong> 동호회를 찾았어요! <a href="/club/'+id+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
+        result.innerHTML = '✓ <strong>'+res.data.name+'</strong> 동호회를 찾았어요! <a href="/club/'+res.data.club_id+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
         result.style.color = 'var(--accent)';
       } else {
-        result.textContent = '등록된 동호회를 찾을 수 없어요.';
-        result.style.color = 'var(--danger)';
+        var nameRes = await db.from('clubs').select('club_id,name').ilike('name', '%'+q+'%').limit(5);
+        if(nameRes.data && nameRes.data.length) {
+          result.innerHTML = nameRes.data.map(function(c){
+            return '✓ <strong>'+c.name+'</strong> <a href="/club/'+c.club_id+'" style="color:var(--accent);font-weight:700">접속 →</a>';
+          }).join('<br>');
+          result.style.color = 'var(--accent)';
+        } else {
+          result.textContent = '등록된 동호회를 찾을 수 없어요.';
+          result.style.color = 'var(--danger)';
+        }
       }
     });
     document.getElementById('club-search-input').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('club-search-btn').click(); });
