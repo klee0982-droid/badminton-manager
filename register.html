@@ -118,7 +118,8 @@
       <div class="url-box" id="success-url"></div>
       <button class="copy-btn" id="copy-url-btn">🔗 링크 복사</button>
       <button class="copy-btn" id="email-btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border)">📧 이메일로 저장하기</button>
-      <button class="go-btn" id="go-app-btn">앱 바로 가기 → <span id="go-countdown"></span></button>
+      <div id="redirect-msg" style="font-size:13px;color:var(--text3);text-align:center;margin-bottom:10px;font-weight:500"></div>
+      <button class="go-btn" id="go-app-btn">앱 바로 가기 →</button>
     </div>
 
     <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text3)">
@@ -249,12 +250,12 @@
         showStep(3);
         // 3초 후 자동 이동
         var countdown = 3;
-        var countEl = document.getElementById('go-countdown');
-        countEl.textContent = '(' + countdown + ')';
+        var msgEl = document.getElementById('redirect-msg');
+        msgEl.textContent = countdown + '초 후 자동으로 앱으로 이동해요';
         var timer = setInterval(function() {
           countdown--;
           if(countdown <= 0) { clearInterval(timer); window.location.href = appUrl; }
-          else countEl.textContent = '(' + countdown + ')';
+          else msgEl.textContent = countdown + '초 후 자동으로 앱으로 이동해요';
         }, 1000);
       } catch(e) {
         btn.disabled = false; btn.textContent = '등록 완료 🎉';

@@ -62,24 +62,38 @@ function renderSelected() {
   byId('selected-strip').innerHTML=sel.length?sel.map(function(m){return '<button type="button" class="sel-pill" data-toggle="'+m.id+'">'+esc(m.name)+' ×</button>';}).join(''):'<span style="font-size:12px;color:var(--text3);font-weight:500">선택된 멤버 없음</span>';
 }
 function renderAttend() {
+  var isEmpty = members.length === 0;
+  // 멤버 없을 때 불필요한 UI 숨기기
+  var statRow = document.querySelector('.stat-row');
+  var configBlock = document.querySelector('.config-block');
+  var searchWrap = document.querySelector('.search-wrap');
+  var selectedStrip = byId('selected-strip');
+  var stickyCta = document.querySelector('.sticky-cta');
+  if(statRow) statRow.style.display = isEmpty ? 'none' : '';
+  if(configBlock) configBlock.style.display = isEmpty ? 'none' : '';
+  if(searchWrap) searchWrap.style.display = isEmpty ? 'none' : '';
+  if(selectedStrip) selectedStrip.style.display = isEmpty ? 'none' : '';
+  if(stickyCta) stickyCta.style.display = isEmpty ? 'none' : '';
+
+  if(isEmpty) {
+    byId('mgrid').innerHTML=
+      '<div style="text-align:center;padding:60px 24px">' +
+        '<div style="font-size:56px;margin-bottom:20px">🏸</div>' +
+        '<div style="font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:-0.03em">환영해요!</div>' +
+        '<div style="font-size:14px;color:var(--text2);font-weight:500;margin-bottom:28px;line-height:1.7">먼저 함께 칠 멤버를 추가해보세요.<br>멤버를 추가하면 출석 체크와 팀 배정을<br>바로 시작할 수 있어요.</div>' +
+        '<button onclick="gotoTab(\'members\')" style="padding:15px 32px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">멤버 추가하기 →</button>' +
+      '</div>';
+    return;
+  }
+
   var term=norm(byId('attend-search').value);
   var filtered=members.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ko');}).filter(function(m){return matchesFn(m,term);});
   byId('attend-search-count').textContent=filtered.length+'명';
   renderSelected();
-  if(members.length===0) {
-    byId('mgrid').innerHTML=
-      '<div style="text-align:center;padding:40px 16px">' +
-        '<div style="font-size:48px;margin-bottom:16px">🏸</div>' +
-        '<div style="font-size:17px;font-weight:800;margin-bottom:8px">멤버가 없어요</div>' +
-        '<div style="font-size:13px;color:var(--text3);font-weight:500;margin-bottom:24px;line-height:1.6">먼저 멤버 탭에서 함께 칠 멤버를<br>추가해주세요</div>' +
-        '<button onclick="gotoTab(\'members\')" style="padding:13px 28px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">멤버 추가하기 →</button>' +
-      '</div>';
-  } else {
-    byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
-      var on=present.has(m.id);
-      return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
-    }).join(''):'<div class="empty">검색 결과 없음</div>';
-  }
+  byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
+    var on=present.has(m.id);
+    return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
+  }).join(''):'<div class="empty">검색 결과 없음</div>';
   var n=present.size,c=Math.min(activeCourtCount,Math.floor(n/4));
   byId('s-total').textContent=n; byId('s-courts').textContent=c;
   byId('s-wait').textContent=Math.max(0,n-c*4); byId('s-games').textContent=gameLog.length;
