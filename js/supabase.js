@@ -50,10 +50,12 @@ async function saveGameState() {
 
 var _liveTimer = null;
 var _lastLiveState = null;
+var _realtimeChannel = null;
+
 function startLivePolling() {
   if(_liveTimer) return;
   refreshLive();
-  _liveTimer = setInterval(refreshLive, 10000);
+  _liveTimer = setInterval(refreshLive, 30000); // fallback: 30초 (Realtime이 주 수단)
 }
 function stopLivePolling() {
   if(_liveTimer) { clearInterval(_liveTimer); _liveTimer = null; }
@@ -63,6 +65,21 @@ async function refreshLive() {
     var res = await db.from('clubs').select('game_state').eq('club_id',CLUB_ID).maybeSingle();
     if(res.data) { _lastLiveState = res.data.game_state; renderLiveView(_lastLiveState); }
   } catch(e) { console.warn('refreshLive:', e?.message||String(e)); }
+}
+
+function startRealtimeLive() {
+  if(_realtimeChannel) return;
+  _realtimeChannel = db.channel('live-'+CLUB_ID)
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'clubs',
+      filter: 'club_id=eq.'+CLUB_ID
+    }, function(payload) {
+      _lastLiveState = payload.new.game_state;
+      renderLiveView(_lastLiveState);
+    })
+    .subscribe();
 }
 
 async function loadFromSupabase() {
@@ -94,7 +111,7 @@ async function loadFromSupabase() {
     if(!hr.error&&hr.data) {
       gameHistory = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{},attendees:p.attendees||[]}; });
     }
-    _lastLiveState = cr.data.game_state; saveLocal(); renderAll(); renderLiveView(_lastLiveState); setSyncBadge('연결됨','ok');
+    _lastLiveState = cr.data.game_state; saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;
   } catch(e) {
     console.warn('loadFromSupabase:',e?.message||String(e)); setSyncBadge('오류','bad');
