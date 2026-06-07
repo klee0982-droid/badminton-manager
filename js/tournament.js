@@ -200,6 +200,127 @@ function roundName(t, ri) {
   return R_NAMES[rem] || (Math.pow(2, rem) + '강');
 }
 
+// ── 브래킷 트리 렌더링 ──
+function renderBracketView(t) {
+  var RW   = 112;  // round column width
+  var CW   = 18;   // connector column width
+  var TH   = 26;   // team row height
+  var DH   = 2;    // score divider height
+  var MH   = TH * 2 + DH; // 54px per match block
+  var LH   = 18;   // label height
+  var SH   = 72;   // slot height per match in round-0
+
+  var rounds = t.rounds;
+  var nR     = rounds.length;
+  var n0     = rounds[0].length;
+  var BH     = n0 * SH;
+  var totalW = nR * RW + (nR - 1) * CW;
+  var totalH = BH + LH;
+
+  var divs = '';
+  var svg  = '';
+
+  rounds.forEach(function(round, ri) {
+    var N      = round.length;
+    var slotH  = BH / N;
+    var colX   = ri * (RW + CW);
+    var isCurr = ri === nR - 1 && t.status === 'active';
+
+    // Round label
+    divs += '<div style="position:absolute;left:'+colX+'px;top:0;width:'+RW+'px;height:'+LH+'px;'
+      + 'text-align:center;font-size:9px;font-weight:700;letter-spacing:.03em;'
+      + 'color:'+(isCurr?'var(--accent)':'var(--text3)')+';line-height:'+LH+'px">'
+      + roundName(t, ri) + '</div>';
+
+    round.forEach(function(m, mi) {
+      // Skip fully-empty slot (no teams)
+      if(!m.t1 && !m.t2) return;
+
+      var cy    = LH + (mi + 0.5) * slotH;
+      var topY  = cy - MH / 2;
+      var w1    = m.winner === 1, w2 = m.winner === 2;
+      var done  = m.winner !== null;
+      var isBye = !m.t1 || !m.t2;
+      var canClick = isCurr && !done && !isBye && isAdmin;
+      var s1    = getSeedNum(t, m.t1), s2 = getSeedNum(t, m.t2);
+
+      var bg1 = w1 ? 'var(--accent-light)' : 'var(--surface2)';
+      var br1 = w1 ? 'var(--accent)' : 'var(--border)';
+      var fc1 = w1 ? 'var(--accent)' : (done && !w1 ? 'var(--text3)' : (!m.t1 ? 'var(--text3)' : 'var(--text)'));
+      var bg2 = w2 ? 'var(--accent-light)' : 'var(--surface2)';
+      var br2 = w2 ? 'var(--accent)' : 'var(--border)';
+      var fc2 = w2 ? 'var(--accent)' : (done && !w2 ? 'var(--text3)' : (!m.t2 ? 'var(--text3)' : 'var(--text)'));
+
+      var t1txt = m.t1 ? tLabel(m.t1, t.type).replace(/<[^>]+>/g, '') : 'BYE';
+      var t2txt = m.t2 ? tLabel(m.t2, t.type).replace(/<[^>]+>/g, '') : 'BYE';
+      var dattr1 = canClick ? ' data-win="'+t.id+':'+ri+':'+mi+':1"' : '';
+      var dattr2 = canClick ? ' data-win="'+t.id+':'+ri+':'+mi+':2"' : '';
+
+      var baseStyle = 'position:absolute;width:'+RW+'px;height:'+TH+'px;display:flex;align-items:center;'
+        + 'padding:0 7px;overflow:hidden;white-space:nowrap;box-sizing:border-box;'
+        + 'font-size:11px;font-weight:600;cursor:'+(canClick?'pointer':'default')+';';
+
+      // Team 1
+      divs += '<div'+dattr1+' style="'+baseStyle+'left:'+colX+'px;top:'+topY+'px;'
+        + 'background:'+bg1+';border:1px solid '+br1+';border-radius:4px 4px 0 0;'
+        + (w1?'font-weight:800;':'')+';color:'+fc1+'">'
+        + (s1&&m.t1?'<b style="font-size:9px;min-width:12px;opacity:.45;flex-shrink:0">'+s1+'</b>':'')
+        + '<span style="overflow:hidden;text-overflow:ellipsis">'+t1txt+(w1?' ✓':'')+'</span></div>';
+
+      // Score divider
+      divs += '<div style="position:absolute;left:'+colX+'px;top:'+(topY+TH)+'px;'
+        + 'width:'+RW+'px;height:'+DH+'px;background:var(--border)">'
+        + (m.score && done ? '<span style="position:absolute;right:4px;top:-8px;font-size:9px;color:var(--text3)">'+esc(m.score)+'</span>' : '')
+        + '</div>';
+
+      // Team 2
+      divs += '<div'+dattr2+' style="'+baseStyle+'left:'+colX+'px;top:'+(topY+TH+DH)+'px;'
+        + 'background:'+bg2+';border:1px solid '+br2+';border-radius:0 0 4px 4px;'
+        + (w2?'font-weight:800;':'')+';color:'+fc2+'">'
+        + (s2&&m.t2?'<b style="font-size:9px;min-width:12px;opacity:.45;flex-shrink:0">'+s2+'</b>':'')
+        + '<span style="overflow:hidden;text-overflow:ellipsis">'+t2txt+(w2?' ✓':'')+'</span></div>';
+
+      // Undo button (overlaid on connector area)
+      if(done && !isBye && isAdmin && isCurr) {
+        divs += '<div data-undo="'+t.id+':'+ri+':'+mi+'" '
+          + 'style="position:absolute;left:'+(colX+RW+1)+'px;top:'+(cy-11)+'px;'
+          + 'width:16px;height:22px;display:flex;align-items:center;justify-content:center;'
+          + 'font-size:13px;color:var(--text3);cursor:pointer;z-index:5" title="취소">↩</div>';
+      }
+
+      // SVG connector lines to next round
+      if(ri < nR - 1) {
+        var midX    = colX + RW + CW / 2;
+        var rightX  = colX + RW + CW;
+        var nextN   = rounds[ri + 1].length;
+        var nextSlotH = BH / nextN;
+        var nextMi  = Math.floor(mi / 2);
+        var nextCy  = LH + (nextMi + 0.5) * nextSlotH;
+
+        // Horizontal arm from this match to connector midpoint
+        svg += '<line x1="'+(colX+RW)+'" y1="'+cy+'" x2="'+midX+'" y2="'+cy+'"'
+          + ' stroke="var(--border)" stroke-width="1.5"/>';
+
+        if(mi % 2 === 0) {
+          // Even slot: draw vertical (to sibling) + horizontal to next round
+          var sibCy = LH + (mi + 1.5) * slotH;
+          svg += '<line x1="'+midX+'" y1="'+cy+'" x2="'+midX+'" y2="'+sibCy+'"'
+            + ' stroke="var(--border)" stroke-width="1.5"/>';
+          svg += '<line x1="'+midX+'" y1="'+nextCy+'" x2="'+rightX+'" y2="'+nextCy+'"'
+            + ' stroke="var(--border)" stroke-width="1.5"/>';
+        }
+      }
+    });
+  });
+
+  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px">'
+    + '<div style="position:relative;width:'+totalW+'px;height:'+totalH+'px">'
+    + divs
+    + '<svg style="position:absolute;top:0;left:0;width:'+totalW+'px;height:'+totalH+'px;'
+    + 'pointer-events:none;overflow:visible">' + svg + '</svg>'
+    + '</div></div>';
+}
+
 // ── 렌더링 ──
 function renderTourneySection() {
   var el = byId('tourney-main');
@@ -230,7 +351,7 @@ function renderTourneySection() {
 
   // 시드 정보 카드
   if(t.seededOrder && t.seededOrder.length) {
-    html += '<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:12px;font-size:12px;color:var(--text2)">'
+    html += '<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--text2)">'
       + '<span style="font-weight:700">ELO 시드 배정:</span> ';
     t.seededOrder.slice(0, 4).forEach(function(team, i) {
       html += (i+1)+'시드 '+tLabel(team, t.type).replace(/<[^>]+>/g,'')+(i<Math.min(3,t.seededOrder.length-1)?', ':'');
@@ -248,53 +369,10 @@ function renderTourneySection() {
       + '</div>';
   }
 
-  // 라운드
-  t.rounds.forEach(function(round, ri) {
-    var real = round.filter(function(m){ return m.t1 && m.t2; });
-    if(!real.length) return;
-    var isCurrent = ri === t.rounds.length - 1 && t.status === 'active';
-    html += '<div class="card" style="margin-bottom:10px'+(isCurrent?'':';opacity:.55')+'">';
-    html += '<div style="font-size:13px;font-weight:800;color:'+(isCurrent?'var(--accent)':'var(--text2)')+';margin-bottom:10px">'+roundName(t, ri)+'</div>';
+  // 대진표 브래킷
+  html += renderBracketView(t);
 
-    real.forEach(function(m) {
-      var mi = round.indexOf(m);
-      var done = m.winner !== null;
-      var w1 = m.winner === 1, w2 = m.winner === 2;
-      var canClick = isCurrent && !done && isAdmin;
-      var s1 = getSeedNum(t, m.t1), s2 = getSeedNum(t, m.t2);
-
-      html += '<div style="display:flex;align-items:stretch;gap:6px;margin-bottom:8px">';
-
-      // 팀1
-      html += '<div style="flex:1">';
-      if(canClick) {
-        html += '<button data-win="'+t.id+':'+ri+':'+mi+':1" style="width:100%;padding:10px 6px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">'+seedBadge(s1)+tLabel(m.t1, t.type)+'<br><span style="font-size:10px;color:var(--text3);font-weight:500">ELO '+(m.t1?Math.round(teamAvgElo(m.t1)):'')+'</span></button>';
-      } else {
-        html += '<div style="padding:10px 6px;background:'+(w1?'var(--accent-light)':'var(--surface2)')+';border:1.5px solid '+(w1?'var(--accent)':'var(--border)')+';border-radius:var(--radius-sm);font-size:13px;font-weight:'+(w1?'800':'600')+';color:'+(w1?'var(--accent)':done?'var(--text3)':'var(--text)')+';text-align:center">'+seedBadge(s1)+tLabel(m.t1, t.type)+(w1?' 🏆':'')+'</div>';
-      }
-      html += '</div>';
-
-      // 가운데
-      html += '<div style="display:flex;align-items:center;flex-direction:column;justify-content:center;font-size:10px;font-weight:700;color:var(--text3);min-width:28px;text-align:center">'+(m.score||'vs')+'</div>';
-
-      // 팀2
-      html += '<div style="flex:1">';
-      if(canClick) {
-        html += '<button data-win="'+t.id+':'+ri+':'+mi+':2" style="width:100%;padding:10px 6px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center">'+seedBadge(s2)+tLabel(m.t2, t.type)+'<br><span style="font-size:10px;color:var(--text3);font-weight:500">ELO '+(m.t2?Math.round(teamAvgElo(m.t2)):'')+'</span></button>';
-      } else {
-        html += '<div style="padding:10px 6px;background:'+(w2?'var(--accent-light)':'var(--surface2)')+';border:1.5px solid '+(w2?'var(--accent)':'var(--border)')+';border-radius:var(--radius-sm);font-size:13px;font-weight:'+(w2?'800':'600')+';color:'+(w2?'var(--accent)':done?'var(--text3)':'var(--text)')+';text-align:center">'+seedBadge(s2)+tLabel(m.t2, t.type)+(w2?' 🏆':'')+'</div>';
-      }
-      html += '</div>';
-
-      if(done && isAdmin && isCurrent) {
-        html += '<button data-undo="'+t.id+':'+ri+':'+mi+'" style="padding:4px 8px;border:none;background:none;color:var(--text3);font-size:11px;cursor:pointer;align-self:center" title="취소">↩</button>';
-      }
-      html += '</div>';
-    });
-    html += '</div>';
-  });
-
-  html += '<div class="btn-row" style="gap:8px;margin-top:4px">';
+  html += '<div class="btn-row" style="gap:8px;margin-top:8px">';
   html += '<button data-share-t="'+t.id+'" style="flex:1;padding:13px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface2);color:var(--text2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">결과 공유 📋</button>';
   if(isAdmin) html += '<button data-del-t="'+t.id+'" style="padding:13px 14px;border:1.5px solid var(--danger-light);border-radius:var(--radius-sm);background:var(--danger-light);color:var(--danger);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">삭제</button>';
   html += '</div>';
