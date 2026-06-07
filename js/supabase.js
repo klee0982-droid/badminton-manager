@@ -127,10 +127,33 @@ async function loadFromSupabase() {
     }
     var gr = await db.from('club_game_state').select('game_state').eq('club_id',CLUB_ID).maybeSingle();
     _lastLiveState = gr.data ? gr.data.game_state : null;
+    // 토너먼트 로드
+    var tr = await db.from('club_tournaments').select('tourney_id,payload').eq('club_id',CLUB_ID).order('tourney_id',{ascending:false});
+    if(!tr.error && tr.data && tr.data.length) {
+      tourneys = tr.data.map(function(r){ return r.payload; }).filter(Boolean);
+      if(!_tView && tourneys.length) _tView = tourneys[0].id;
+      localStorage.setItem(TOURNEY_KEY, JSON.stringify(tourneys));
+    }
     saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;
   } catch(e) {
     console.warn('loadFromSupabase:',e?.message||String(e)); setSyncBadge('오류','bad');
     byId('data-msg').textContent = '연결 실패. 테이블/RLS/API key를 확인하세요.';
   }
+}
+
+async function saveTourneysToSupabase() {
+  if(!tourneys || !tourneys.length) return;
+  try {
+    var rows = tourneys.map(function(t) {
+      return { club_id: CLUB_ID, tourney_id: t.id, payload: t, updated_at: new Date().toISOString() };
+    });
+    await db.from('club_tournaments').upsert(rows, { onConflict: 'club_id,tourney_id' });
+  } catch(e) { console.warn('saveTourneysToSupabase:', e?.message||String(e)); }
+}
+
+async function deleteTourneyFromSupabase(tId) {
+  try {
+    await db.from('club_tournaments').delete().eq('club_id', CLUB_ID).eq('tourney_id', tId);
+  } catch(e) { console.warn('deleteTourneyFromSupabase:', e?.message||String(e)); }
 }

@@ -7,6 +7,7 @@ var _td = {};
 
 function saveTourneys() {
   localStorage.setItem(TOURNEY_KEY, JSON.stringify(tourneys));
+  if(typeof saveTourneysToSupabase === 'function') saveTourneysToSupabase();
 }
 
 // ── 시드 배정 (BWF 표준 방식) ──
@@ -172,6 +173,7 @@ function deleteTourney(tId) {
   tourneys = tourneys.filter(function(t){ return t.id !== tId; });
   _tView = tourneys.length ? tourneys[tourneys.length - 1].id : null;
   saveTourneys();
+  if(typeof deleteTourneyFromSupabase === 'function') deleteTourneyFromSupabase(tId);
   renderTourneySection();
 }
 
@@ -330,24 +332,49 @@ function renderTourneySection() {
 
   var html = '';
 
+  // 대회 목록 헤더
+  html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+  html += '<div style="font-size:13px;font-weight:800;color:var(--text)">대회 목록 <span style="font-size:11px;font-weight:500;color:var(--text3)">'+tourneys.length+'개</span></div>';
+  if(isAdmin) html += '<button data-new-tourney style="padding:7px 14px;border:1.5px solid var(--accent);border-radius:20px;background:var(--accent-light);color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ 새 대회</button>';
+  html += '</div>';
+
   if(tourneys.length > 0) {
-    html += '<div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px">';
-    tourneys.forEach(function(t) {
+    // 날짜·상태가 보이는 목록 형태
+    html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
+    // 최신순 정렬
+    var sorted = tourneys.slice().sort(function(a,b){ return b.id - a.id; });
+    sorted.forEach(function(t) {
       var on = t.id === _tView;
-      html += '<button data-tview="'+t.id+'" style="white-space:nowrap;padding:6px 14px;border-radius:20px;border:1.5px solid '+(on?'var(--accent)':'var(--border)')+';background:'+(on?'var(--accent-light)':'var(--surface)')+';color:'+(on?'var(--accent)':'var(--text2)')+';font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">'+(t.status==='done'?'🏆 ':'')+esc(t.name)+'</button>';
+      var d  = new Date(t.id);
+      var dateStr = (d.getMonth()+1)+'/'+(d.getDate())+' '+(d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
+      var statusTag = t.status === 'done'
+        ? '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:#fde68a;color:#92400e;font-weight:700;margin-left:6px">완료</span>'
+        : '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:var(--accent-light);color:var(--accent);font-weight:700;margin-left:6px">진행중</span>';
+      var participantInfo = t.teams ? t.teams.length+'팀' : '';
+      html += '<button data-tview="'+t.id+'" style="'
+        + 'width:100%;padding:10px 14px;border-radius:var(--radius-sm);'
+        + 'border:1.5px solid '+(on?'var(--accent)':'var(--border)')+';'
+        + 'background:'+(on?'var(--accent-light)':'var(--surface)')+';'
+        + 'cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;justify-content:space-between">'
+        + '<div>'
+        + '<span style="font-size:13px;font-weight:700;color:'+(on?'var(--accent)':'var(--text)')+'">'+(t.status==='done'?'🏆 ':'')+esc(t.name)+'</span>'
+        + statusTag
+        + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'+dateStr+(participantInfo?' · '+participantInfo:'')+(t.type==='doubles'?' · 복식':' · 단식')+'</div>'
+        + '</div>'
+        + '<span style="font-size:16px;color:'+(on?'var(--accent)':'var(--text3)')+'">'+( on?'●':'○')+'</span>'
+        + '</button>';
     });
     html += '</div>';
-  }
-
-  if(isAdmin) {
-    html += '<button data-new-tourney style="width:100%;padding:12px;border:1.5px dashed var(--border);border-radius:var(--radius-sm);background:none;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:12px">+ 새 대회 만들기</button>';
+  } else {
+    html += '<div style="text-align:center;padding:24px 16px;color:var(--text3);font-size:13px">아직 대회가 없어요</div>';
   }
 
   var t = _tView ? tourneys.find(function(x){ return x.id === _tView; }) : null;
-  if(!t) {
-    html += '<div style="text-align:center;padding:48px 16px;color:var(--text3);font-size:14px;font-weight:500">🏆 진행 중인 대회가 없어요</div>';
-    el.innerHTML = html; bindTourneyMain(); return;
-  }
+  if(!t) { el.innerHTML = html; bindTourneyMain(); return; }
+
+  // 선택된 대회 구분선
+  html += '<div style="border-top:1.5px solid var(--border);margin:4px 0 12px"></div>';
+  html += '<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">'+(t.status==='done'?'🏆 ':'')+esc(t.name)+'</div>';
 
   // 시드 정보 카드
   if(t.seededOrder && t.seededOrder.length) {
