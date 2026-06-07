@@ -2,276 +2,139 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>배드민턴 매니저</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>배드민턴 매니저 · 동호회 전용 매칭 앱</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <style>
+    :root {
+      --bg: #f9f9f7; --surface: #ffffff; --surface2: #f2f2ef; --border: #e8e8e4;
+      --text: #1a1a18; --text2: #6b6b65; --text3: #a8a8a2;
+      --accent: #2d7a3a; --accent-light: #e8f5eb; --accent-mid: #c3e6c8;
+      --danger: #c0392b;
+      --radius-sm: 10px; --radius: 16px; --radius-lg: 22px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Pretendard', -apple-system, sans-serif; }
+    .nav { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+    .nav-logo { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; }
+    .nav-btn { padding: 9px 18px; background: var(--accent); color: #fff; border: none; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; text-decoration: none; }
+    .hero { text-align: center; padding: 80px 24px 60px; max-width: 680px; margin: 0 auto; }
+    .hero-badge { display: inline-block; background: var(--accent-light); color: var(--accent); font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; margin-bottom: 20px; border: 1px solid var(--accent-mid); }
+    .hero-title { font-size: 48px; font-weight: 800; letter-spacing: -0.04em; line-height: 1.15; margin-bottom: 16px; }
+    .hero-title span { color: var(--accent); }
+    .hero-sub { font-size: 17px; color: var(--text2); font-weight: 500; line-height: 1.6; margin-bottom: 36px; }
+    .hero-btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary { padding: 15px 32px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; }
+    .btn-secondary { padding: 15px 32px; background: var(--surface); color: var(--text); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; }
+    .features { max-width: 1100px; margin: 0 auto; padding: 60px 24px; }
+    .features-title { text-align: center; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .features-sub { text-align: center; font-size: 15px; color: var(--text3); font-weight: 500; margin-bottom: 40px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+    .feature-icon { font-size: 32px; margin-bottom: 12px; }
+    .feature-title { font-size: 16px; font-weight: 800; margin-bottom: 6px; }
+    .feature-desc { font-size: 13px; color: var(--text2); line-height: 1.6; font-weight: 500; }
+    .flow { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 60px 24px; }
+    .flow-inner { max-width: 800px; margin: 0 auto; }
+    .flow-title { text-align: center; font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+    .flow-sub { text-align: center; font-size: 15px; color: var(--text3); font-weight: 500; margin-bottom: 40px; }
+    .flow-step { display: flex; gap: 20px; align-items: flex-start; padding: 20px 0; border-bottom: 1px solid var(--border); }
+    .flow-step:last-child { border-bottom: none; }
+    .flow-num { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .flow-content-title { font-size: 15px; font-weight: 800; margin-bottom: 4px; }
+    .flow-content-desc { font-size: 13px; color: var(--text2); font-weight: 500; line-height: 1.5; }
+    .search-section { max-width: 480px; margin: 0 auto 60px; padding: 0 24px; }
+    .search-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; text-align: center; }
+    .search-row { display: flex; gap: 8px; }
+    .search-input { flex: 1; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; font-family: inherit; }
+    .search-input:focus { border-color: var(--accent); }
+    .search-btn { padding: 12px 18px; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .search-result { margin-top: 10px; font-size: 13px; }
+    .cta { text-align: center; padding: 80px 24px; }
+    .cta-title { font-size: 36px; font-weight: 800; letter-spacing: -0.04em; margin-bottom: 12px; }
+    .cta-sub { font-size: 15px; color: var(--text3); font-weight: 500; margin-bottom: 32px; }
+    .footer { text-align: center; padding: 24px; font-size: 12px; color: var(--text3); border-top: 1px solid var(--border); }
+    @media (max-width: 600px) { .hero-title { font-size: 34px; } }
+  </style>
 </head>
 <body>
-  <!-- 수동 교체 팝업 -->
-  <div class="swap-overlay" id="swap-overlay" style="display:none" onclick="if(event.target===this)closeSwapPopup()">
-    <div class="swap-sheet">
-      <div class="swap-title" id="swap-title">교체할 선수 선택</div>
-      <div class="swap-sub" id="swap-sub"></div>
-      <div class="swap-list" id="swap-list"></div>
-      <button class="swap-cancel" onclick="closeSwapPopup()">취소</button>
+  <nav class="nav">
+    <div class="nav-logo">🏸 배드민턴 매니저</div>
+    <a href="/register.html" class="nav-btn">무료로 시작하기</a>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-badge">✨ 무료로 시작하세요</div>
+    <h1 class="hero-title">동호회 배드민턴,<br><span>스마트하게</span> 관리하세요</h1>
+    <p class="hero-sub">출석 체크부터 공정한 팀 배정, ELO 기반 실력 기록까지.<br>우리 동호회만의 전용 앱을 5분 안에 만들어보세요.</p>
+    <div class="hero-btns">
+      <a href="/register.html" class="btn-primary">우리 동호회 앱 만들기 →</a>
+      <a href="/app?club=kp-badminton" class="btn-secondary">데모 보기</a>
     </div>
+  </section>
+
+  <div class="search-section">
+    <div class="search-title">이미 등록된 동호회라면</div>
+    <div class="search-row">
+      <input type="text" class="search-input" id="club-search-input" placeholder="동호회 ID 입력 (예: kp-badminton)" />
+      <button class="search-btn" id="club-search-btn">접속 →</button>
+    </div>
+    <div class="search-result" id="search-result"></div>
   </div>
 
-  <div class="app">
-    <div class="header">
-      <div>
-        <div class="header-title">배드민턴</div>
-        <div class="header-sub">출석 · 매칭 · 기록</div>
-      </div>
-      <div class="sync-pill" id="sync-badge">동기화 중</div>
+  <section class="features">
+    <div class="features-title">필요한 건 다 있어요</div>
+    <div class="features-sub">복잡한 설치 없이 링크 하나로 바로 사용</div>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="feature-icon">✅</div><div class="feature-title">출석 체크</div><div class="feature-desc">이름 탭 한 번으로 출석 완료. 늦게 오는 멤버도 중간에 추가 가능해요.</div></div>
+      <div class="feature-card"><div class="feature-icon">⚖️</div><div class="feature-title">공정한 팀 배정</div><div class="feature-desc">ELO 기반으로 실력 균형을 맞추고, 혼합복식 우선 · 같은 팀 반복 방지까지.</div></div>
+      <div class="feature-card"><div class="feature-icon">📊</div><div class="feature-title">ELO 실력 기록</div><div class="feature-desc">게임 결과를 입력하면 자동으로 ELO가 계산되고 실력 변화를 추적해요.</div></div>
+      <div class="feature-card"><div class="feature-icon">🏆</div><div class="feature-title">오늘의 하이라이트</div><div class="feature-desc">MVP, 최다 연승, 박빙 경기, 역전왕 — 카카오톡으로 바로 공유하세요.</div></div>
+      <div class="feature-card"><div class="feature-icon">📈</div><div class="feature-title">개인 기록</div><div class="feature-desc">내 승률, 최강 파트너, 천적, 코트별 승률까지 한눈에 확인해요.</div></div>
+      <div class="feature-card"><div class="feature-icon">☁️</div><div class="feature-title">클라우드 저장</div><div class="feature-desc">어느 기기에서든 같은 데이터를 볼 수 있어요.</div></div>
     </div>
+  </section>
 
-    <div class="admin-bar" id="admin-panel">
-      <span class="admin-label">관리자</span>
-      <input type="password" id="admin-pin" inputmode="numeric" placeholder="PIN" />
-      <button class="btn primary" type="button" id="admin-login-btn" style="padding:8px 14px;font-size:12px">로그인</button>
-      <button class="btn" type="button" id="admin-logout-btn" style="display:none;padding:8px 14px;font-size:12px">로그아웃</button>
-      <span class="admin-status" id="admin-status">보기</span>
-      <span id="admin-msg" style="font-size:12px;font-weight:700;display:none;margin-left:4px"></span>
+  <section class="flow">
+    <div class="flow-inner">
+      <div class="flow-title">어떻게 사용하나요?</div>
+      <div class="flow-sub">설치 없이 링크 하나로 시작</div>
+      <div class="flow-step"><div class="flow-num">1</div><div><div class="flow-content-title">동호회 등록 (1분)</div><div class="flow-content-desc">동호회 이름과 관리자 PIN을 입력하면 전용 링크가 바로 발급돼요.</div></div></div>
+      <div class="flow-step"><div class="flow-num">2</div><div><div class="flow-content-title">멤버 등록</div><div class="flow-content-desc">이름, 성별, 초기 ELO를 입력해서 멤버를 추가해요.</div></div></div>
+      <div class="flow-step"><div class="flow-num">3</div><div><div class="flow-content-title">경기 당일 사용</div><div class="flow-content-desc">출석 체크 → 게임 시작 → 점수 입력 → ELO 반영.</div></div></div>
+      <div class="flow-step"><div class="flow-num">4</div><div><div class="flow-content-title">결과 공유</div><div class="flow-content-desc">하이라이트를 카카오톡 단체방에 한 번에 공유하세요.</div></div></div>
     </div>
+  </section>
 
-    <nav class="tab-bar">
-      <button class="tab active" data-tab="attend">출석</button>
-      <button class="tab" data-tab="play">진행</button>
-      <button class="tab" data-tab="result">결과</button>
-      <button class="tab" data-tab="members">멤버</button>
-      <button class="tab" data-tab="player">내기록</button>
-      <button class="tab" data-tab="data">데이터</button>
-    </nav>
+  <section class="cta">
+    <div class="cta-title">우리 동호회도 시작해볼까요?</div>
+    <div class="cta-sub">무료로 시작하고, 마음에 들면 계속 쓰세요.</div>
+    <a href="/register.html" class="btn-primary">무료로 시작하기 →</a>
+  </section>
 
-    <!-- 출석 -->
-    <section id="tab-attend" class="section active">
-      <div class="section-header">
-        <div class="section-title">출석 체크</div>
-        <div class="section-desc">오늘 참여할 멤버를 선택하세요</div>
-      </div>
-      <div class="stat-row">
-        <div class="stat-box"><div class="stat-n" id="s-total">0</div><div class="stat-l">출석</div></div>
-        <div class="stat-box"><div class="stat-n" id="s-courts">0</div><div class="stat-l">코트</div></div>
-        <div class="stat-box"><div class="stat-n" id="s-wait">0</div><div class="stat-l">대기</div></div>
-        <div class="stat-box"><div class="stat-n" id="s-games">0</div><div class="stat-l">완료</div></div>
-      </div>
-      <div id="attend-alert" style="display:none" class="alert"></div>
-      <div class="config-block">
-        <div class="config-label">코트 수</div>
-        <div class="seg-group">
-          <button class="seg active" data-court-count="1">1코트</button>
-          <button class="seg" data-court-count="2">2코트</button>
-          <button class="seg" data-court-count="3">3코트</button>
-          <button class="seg" data-court-count="4">4코트</button>
-          <span id="court-config-hint" style="font-size:11px;color:var(--text3);align-self:center;font-weight:500"></span>
-        </div>
-      </div>
-      <div class="search-wrap">
-        <span style="font-size:14px">🔎</span>
-        <input type="text" id="attend-search" placeholder="이름 검색" />
-        <span class="search-cnt" id="attend-search-count">0명</span>
-      </div>
-      <div class="selected-strip" id="selected-strip"></div>
-      <div class="member-grid" id="mgrid"></div>
-      <div class="sticky-cta">
-        <div class="btn-row">
-          <button class="btn primary big" id="start-btn">게임 시작 →</button>
-          <button class="btn" id="reset-btn" style="padding:15px 16px">초기화</button>
-        </div>
-      </div>
-    </section>
+  <footer class="footer">© 2026 배드민턴 매니저</footer>
 
-    <!-- 진행 -->
-    <section id="tab-play" class="section">
-      <div class="section-header">
-        <div class="section-title">게임 진행</div>
-        <div class="section-desc">점수 입력 후 완료하면 다음 조가 자동 배정됩니다</div>
-      </div>
-      <div id="play-empty" class="alert info">출석에서 멤버를 선택하고 게임을 시작해주세요.</div>
-      <div id="play-main" style="display:none">
-        <div class="play-layout-wrap">
-          <div class="play-grid" id="court-grid"></div>
-          <div class="wait-section">
-            <div class="status-board">
-              <div class="status-box"><div class="sn" id="sb-playing">0</div><div class="sl">🏸 게임 중</div></div>
-              <div class="status-box"><div class="sn" id="sb-waiting">0</div><div class="sl">⏳ 대기 중</div></div>
-              <div class="status-box"><div class="sn" id="sb-paused">0</div><div class="sl">💤 휴식 중</div></div>
-            </div>
-            <div class="section-toggle open" id="status-toggle">
-              <strong style="font-size:13px;font-weight:700">대기자 현황</strong>
-              <span class="arrow">▼</span>
-            </div>
-            <div id="player-status-list" class="player-status-list"></div>
-            <div class="paused-section" id="paused-section" style="display:none">
-              <div class="paused-label">휴식 중</div>
-              <div class="wait-chips" id="paused-list"></div>
-            </div>
-            <div class="queue-note" id="queue-hint"></div>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn ghost" id="back-attend-btn">← 출석 수정</button>
-          <button class="btn primary" id="finish-btn" style="flex:1">종료 & 결과 →</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 결과 -->
-    <section id="tab-result" class="section">
-      <div class="section-header">
-        <div class="section-title">오늘 결과</div>
-        <div class="section-desc">ELO 변동과 게임 기록</div>
-      </div>
-      <div id="result-empty" class="alert info">아직 게임 기록이 없어요.</div>
-      <div id="result-main" style="display:none">
-        <div class="result-hero">
-          <div class="result-date" id="r-date"></div>
-          <div class="result-sub" id="r-sub"></div>
-        </div>
-        <div class="result-grid" id="r-stats"></div>
-        <div class="result-two-col">
-          <div class="card">
-            <div class="card-title">ELO 변동</div>
-            <div id="r-rankings"></div>
-          </div>
-          <div class="card">
-            <div class="card-title">게임 기록</div>
-            <div id="r-games"></div>
-          </div>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary big" id="apply-btn">ELO 반영 & 저장 →</button>
-          <button class="btn" id="discard-btn" style="padding:15px 14px;font-size:12px">저장만</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 멤버 -->
-    <section id="tab-members" class="section">
-      <div class="section-header">
-        <div class="section-title">멤버 관리</div>
-        <div class="section-desc">멤버 추가 및 ELO · 성별 수정</div>
-      </div>
-      <div class="member-manage-grid">
-        <div>
-          <div class="card">
-            <div class="card-title">새 멤버 추가</div>
-            <div class="form-row"><label class="form-label">이름</label><input type="text" id="n-name" placeholder="이름" style="width:130px" /></div>
-            <div class="form-row"><label class="form-label">성별</label><select id="n-gender"><option value="M">남</option><option value="F">여</option></select></div>
-            <div class="form-row"><label class="form-label">ELO</label><input type="number" id="n-elo" value="1000" min="100" max="3000" style="width:90px" /><span style="font-size:12px;color:var(--text3);font-weight:500">기본 1000</span></div>
-            <button class="btn primary" id="add-member-btn">추가</button>
-          </div>
-          <div class="card">
-            <div class="card-title">등급 기준</div>
-            <div class="tier-grid" id="tier-guide"></div>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-title">전체 멤버</div>
-          <div class="search-wrap" style="margin-bottom:10px">
-            <span style="font-size:14px">🔎</span>
-            <input type="text" id="member-search" placeholder="이름 / ELO / 등급" />
-            <span class="search-cnt" id="member-search-count">0명</span>
-          </div>
-          <div id="bulk-bar" style="display:none;margin-bottom:10px;align-items:center;gap:8px">
-            <span id="bulk-count" style="font-size:12px;font-weight:700;color:var(--text2)">0명 선택</span>
-            <button class="btn danger" id="bulk-del-btn" style="font-size:12px;padding:7px 12px;margin-left:auto">선택 삭제</button>
-            <button class="btn ghost" id="bulk-cancel-btn" style="font-size:12px;padding:7px 12px">취소</button>
-          </div>
-          <div id="mlist"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 내기록 -->
-    <section id="tab-player" class="section">
-      <div class="section-header">
-        <div class="section-title">개인 기록</div>
-        <div class="section-desc">이름을 검색해 플레이 내역을 확인하세요</div>
-      </div>
-      <div class="search-wrap">
-        <span style="font-size:14px">🔎</span>
-        <input type="text" id="player-search" placeholder="이름 검색" />
-        <span class="search-cnt" id="player-search-count">0명</span>
-      </div>
-      <div class="selected-strip" id="player-search-results"></div>
-      <div id="player-empty" class="alert info">이름을 검색하고 선택하세요.</div>
-      <div id="player-main" style="display:none">
-        <div class="card">
-          <div style="font-size:16px;font-weight:800;margin-bottom:12px;letter-spacing:-0.02em" id="player-name-title"></div>
-          <div class="player-stats" id="player-summary"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">ELO 변화</div>
-          <div class="chart-wrap">
-            <svg class="elo-chart" id="player-elo-chart" viewBox="0 0 640 160" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="chart-note" id="player-chart-label"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">최근 플레이</div>
-          <div id="player-match-list"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 데이터 -->
-    <section id="tab-data" class="section">
-      <div class="section-header">
-        <div class="section-title">데이터</div>
-        <div class="section-desc">백업 및 세션 기록</div>
-      </div>
-      <div class="card">
-        <div class="card-title">연결 상태</div>
-        <div style="font-size:12px;color:var(--text3);font-weight:500" id="data-msg">확인 중...</div>
-      </div>
-      <div class="card">
-        <div class="card-title">백업 JSON</div>
-        <div class="btn-row" style="margin-bottom:10px;gap:6px">
-          <button class="btn primary" id="export-btn" style="font-size:12px;padding:9px 12px">내보내기</button>
-          <button class="btn" id="copy-btn" style="font-size:12px;padding:9px 12px">복사</button>
-          <button class="btn" id="import-btn" style="font-size:12px;padding:9px 12px">가져오기</button>
-          <button class="btn danger" id="clear-history-btn" style="font-size:12px;padding:9px 12px">기록 삭제</button>
-        </div>
-        <textarea class="data-box" id="data-box"></textarea>
-      </div>
-      <div class="card">
-        <div class="card-title">출석 내보내기</div>
-        <div style="font-size:12px;color:var(--text3);font-weight:500;margin-bottom:10px">세션별 출석 명단을 텍스트로 복사합니다.</div>
-        <div class="btn-row" style="margin-bottom:10px;gap:6px">
-          <button class="btn primary" id="export-attendance-btn" style="font-size:12px;padding:9px 12px">출석 명단 복사</button>
-          <select id="attendance-session-select" style="font-size:12px;padding:8px 10px;flex:1"></select>
-        </div>
-        <textarea class="data-box" id="attendance-box" placeholder="세션을 선택하면 출석 명단이 표시됩니다." style="min-height:120px"></textarea>
-      </div>
-      <div class="card">
-        <div class="card-title">결과 공유</div>
-        <div style="font-size:12px;color:var(--text3);font-weight:500;margin-bottom:10px">최근 세션 결과를 텍스트로 복사해서 카카오톡에 붙여넣으세요.</div>
-        <div class="btn-row" style="margin-bottom:10px;gap:6px">
-          <button class="btn primary" id="share-latest-btn" style="font-size:12px;padding:9px 12px">최근 세션 복사</button>
-          <button class="btn" id="share-all-btn" style="font-size:12px;padding:9px 12px">오늘 전체 복사</button>
-        </div>
-        <textarea class="data-box" id="share-box" placeholder="복사 버튼을 누르면 여기에 공유용 텍스트가 생성됩니다." style="min-height:160px"></textarea>
-      </div>
-      <div class="card">
-        <div class="card-title">세션 기록</div>
-        <div id="history-list"></div>
-      </div>
-    </section>
-
-    <div class="test-status" id="test-status"></div>
-  </div>
-
-  <!-- JS: 순서 중요! -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/supabase.js"></script>
-  <script src="js/matching.js"></script>
-  <script src="js/stats.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/app.js"></script>
+  <script>
+    var SUPABASE_URL = 'https://hvvxequwyjqbgxmnavbz.supabase.co';
+    var SUPABASE_KEY = 'sb_publishable_1Tmj2oW-SGR5KcnVbbq-iA_JEW_QmPb';
+    var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    document.getElementById('club-search-btn').addEventListener('click', async function() {
+      var id = document.getElementById('club-search-input').value.trim();
+      if(!id) return;
+      var result = document.getElementById('search-result');
+      result.textContent = '검색 중...'; result.style.color = 'var(--text3)';
+      var res = await db.from('clubs').select('club_id,name').eq('club_id', id).maybeSingle();
+      if(res.data) {
+        result.innerHTML = '✓ <strong>'+res.data.name+'</strong> 동호회를 찾았어요! <a href="/app?club='+id+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
+        result.style.color = 'var(--accent)';
+      } else {
+        result.textContent = '등록된 동호회를 찾을 수 없어요.';
+        result.style.color = 'var(--danger)';
+      }
+    });
+    document.getElementById('club-search-input').addEventListener('keydown', function(e){ if(e.key==='Enter') document.getElementById('club-search-btn').click(); });
+  </script>
 </body>
 </html>

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>동호회 등록 · 배드민턴 매니저</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f9f9f7; --surface: #ffffff; --surface2: #f2f2ef; --border: #e8e8e4;
+      --text: #1a1a18; --text2: #6b6b65; --text3: #a8a8a2;
+      --accent: #2d7a3a; --accent-light: #e8f5eb; --accent-mid: #c3e6c8;
+      --danger: #c0392b; --danger-light: #fdf0ef;
+      --radius-sm: 10px; --radius: 16px; --radius-lg: 22px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Pretendard', -apple-system, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .wrap { width: 100%; max-width: 420px; }
+    .logo { text-align: center; margin-bottom: 32px; }
+    .logo-icon { font-size: 48px; margin-bottom: 12px; }
+    .logo-title { font-size: 24px; font-weight: 800; letter-spacing: -0.04em; }
+    .logo-sub { font-size: 13px; color: var(--text3); margin-top: 4px; font-weight: 500; }
+    .card { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 28px 24px; }
+    .card-title { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .card-sub { font-size: 13px; color: var(--text3); font-weight: 500; margin-bottom: 24px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 6px; display: block; }
+    .form-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: var(--surface); color: var(--text); outline: none; font-family: inherit; transition: border-color .15s; }
+    .form-input:focus { border-color: var(--accent); }
+    .form-hint { font-size: 11px; color: var(--text3); margin-top: 5px; font-weight: 500; }
+    .form-hint.error { color: var(--danger); }
+    .form-hint.success { color: var(--accent); }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity .15s; margin-top: 8px; }
+    .btn:hover { opacity: .9; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .divider { text-align: center; color: var(--text3); font-size: 12px; font-weight: 500; margin: 20px 0; }
+    .link-btn { display: block; text-align: center; font-size: 13px; color: var(--accent); font-weight: 600; text-decoration: none; margin-top: 16px; }
+
+    /* 완료 화면 */
+    .success-card { display: none; text-align: center; }
+    .success-icon { font-size: 56px; margin-bottom: 16px; }
+    .success-title { font-size: 22px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 8px; }
+    .success-sub { font-size: 14px; color: var(--text2); font-weight: 500; margin-bottom: 24px; line-height: 1.6; }
+    .url-box { background: var(--surface2); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; font-size: 13px; font-family: ui-monospace, monospace; color: var(--text); word-break: break-all; margin-bottom: 12px; text-align: left; }
+    .copy-btn { width: 100%; padding: 13px; border: 1.5px solid var(--accent); border-radius: var(--radius-sm); background: var(--accent-light); color: var(--accent); font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; margin-bottom: 10px; }
+    .go-btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius-sm); background: var(--accent); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+    .step-indicator { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+    .step { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background .2s; }
+    .step.active { background: var(--accent); width: 24px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">
+      <div class="logo-icon">🏸</div>
+      <div class="logo-title">배드민턴 매니저</div>
+      <div class="logo-sub">동호회 전용 매칭 & 기록 앱</div>
+    </div>
+
+    <div class="step-indicator">
+      <div class="step active" id="step1-dot"></div>
+      <div class="step" id="step2-dot"></div>
+      <div class="step" id="step3-dot"></div>
+    </div>
+
+    <!-- Step 1: 동호회 정보 입력 -->
+    <div class="card" id="step1-card">
+      <div class="card-title">동호회 등록</div>
+      <div class="card-sub">동호회 정보를 입력하고 전용 앱을 만들어보세요</div>
+
+      <div class="form-group">
+        <label class="form-label">동호회 이름 *</label>
+        <input type="text" id="club-name" class="form-input" placeholder="예: 강남 배드민턴 동호회" maxlength="30" />
+        <div class="form-hint">최대 30자</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">관리자 PIN * <span style="font-weight:500;color:var(--text3)">(숫자 4~6자리)</span></label>
+        <input type="password" id="club-pin" class="form-input" placeholder="관리자 전용 비밀번호" maxlength="6" inputmode="numeric" />
+        <div class="form-hint">게임 시작, 멤버 수정 등 관리 기능에 사용돼요</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">동호회 ID <span style="font-weight:500;color:var(--text3)">(영문+숫자, 직접 입력 가능)</span></label>
+        <input type="text" id="club-id" class="form-input" placeholder="자동 생성됩니다" maxlength="30" />
+        <div class="form-hint" id="club-id-hint">동호회 이름을 입력하면 자동으로 생성돼요</div>
+      </div>
+
+      <button class="btn" id="register-btn" disabled>다음 →</button>
+      <a href="/" class="link-btn">← 메인으로</a>
+    </div>
+
+    <!-- Step 2: 확인 -->
+    <div class="card" id="step2-card" style="display:none">
+      <div class="card-title">이대로 등록할까요?</div>
+      <div class="card-sub">등록 후에도 이름은 변경할 수 있어요</div>
+
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
+        <div style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:4px">동호회 이름</div>
+        <div style="font-size:16px;font-weight:800" id="confirm-name"></div>
+        <div style="font-size:12px;color:var(--text3);font-weight:600;margin-top:12px;margin-bottom:4px">앱 주소</div>
+        <div style="font-size:13px;font-weight:600;color:var(--accent);word-break:break-all" id="confirm-url"></div>
+        <div style="font-size:12px;color:var(--text3);font-weight:600;margin-top:12px;margin-bottom:4px">관리자 PIN</div>
+        <div style="font-size:16px;font-weight:800" id="confirm-pin"></div>
+      </div>
+
+      <button class="btn" id="confirm-btn">등록 완료 🎉</button>
+      <button class="btn" id="back-btn" style="background:var(--surface2);color:var(--text2);border:1.5px solid var(--border);margin-top:8px">← 수정하기</button>
+    </div>
+
+    <!-- Step 3: 완료 -->
+    <div class="card success-card" id="step3-card">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">등록 완료!</div>
+      <div class="success-sub" id="success-msg"></div>
+      <div class="url-box" id="success-url"></div>
+      <button class="copy-btn" id="copy-url-btn">🔗 링크 복사</button>
+      <button class="go-btn" id="go-app-btn">앱 바로 가기 →</button>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:var(--text3)">
+      이미 등록된 동호회라면 <a href="#" id="login-link" style="color:var(--accent);font-weight:600">링크로 바로 접속</a>하세요
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    var SUPABASE_URL = 'https://hvvxequwyjqbgxmnavbz.supabase.co';
+    var SUPABASE_KEY = 'sb_publishable_1Tmj2oW-SGR5KcnVbbq-iA_JEW_QmPb';
+    var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    var nameEl  = document.getElementById('club-name');
+    var pinEl   = document.getElementById('club-pin');
+    var idEl    = document.getElementById('club-id');
+    var hintEl  = document.getElementById('club-id-hint');
+    var regBtn  = document.getElementById('register-btn');
+
+    // 이름 → club_id 자동 생성
+    nameEl.addEventListener('input', function() {
+      var name = nameEl.value.trim();
+      if(!name) { idEl.value=''; hintEl.textContent='동호회 이름을 입력하면 자동으로 생성돼요'; hintEl.className='form-hint'; validate(); return; }
+      var auto = name
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9가-힣-]/g, '')
+        .slice(0, 30);
+      if(!idEl.dataset.edited) idEl.value = auto;
+      checkId(idEl.value);
+      validate();
+    });
+
+    // 수동 입력
+    idEl.addEventListener('input', function() {
+      idEl.dataset.edited = '1';
+      var val = idEl.value.toLowerCase().replace(/[^a-z0-9-]/g,'');
+      idEl.value = val;
+      checkId(val);
+      validate();
+    });
+
+    pinEl.addEventListener('input', validate);
+
+    var checkTimer = null;
+    function checkId(id) {
+      if(!id || id.length < 2) { hintEl.textContent='2자 이상 입력하세요'; hintEl.className='form-hint'; return; }
+      hintEl.textContent='확인 중...'; hintEl.className='form-hint';
+      clearTimeout(checkTimer);
+      checkTimer = setTimeout(async function() {
+        var res = await db.from('clubs').select('club_id').eq('club_id', id).maybeSingle();
+        if(res.data) { hintEl.textContent='이미 사용 중인 ID예요. 다른 ID를 입력해주세요.'; hintEl.className='form-hint error'; }
+        else { hintEl.textContent='✓ 사용 가능한 ID예요!'; hintEl.className='form-hint success'; }
+        validate();
+      }, 500);
+    }
+
+    function validate() {
+      var ok = nameEl.value.trim().length >= 2 &&
+               pinEl.value.length >= 4 &&
+               idEl.value.length >= 2 &&
+               hintEl.className.indexOf('error') === -1 &&
+               hintEl.className.indexOf('success') >= 0;
+      regBtn.disabled = !ok;
+    }
+
+    // Step 1 → Step 2
+    regBtn.addEventListener('click', function() {
+      document.getElementById('confirm-name').textContent = nameEl.value.trim();
+      var appUrl = window.location.origin + '/app?club=' + idEl.value;
+      document.getElementById('confirm-url').textContent = appUrl;
+      document.getElementById('confirm-pin').textContent = '●'.repeat(pinEl.value.length);
+      showStep(2);
+    });
+
+    document.getElementById('back-btn').addEventListener('click', function() { showStep(1); });
+
+    // Step 2 → Step 3 (등록)
+    document.getElementById('confirm-btn').addEventListener('click', async function() {
+      var btn = document.getElementById('confirm-btn');
+      btn.disabled = true; btn.textContent = '등록 중...';
+      try {
+        var res = await db.from('clubs').insert({
+          club_id: idEl.value,
+          name: nameEl.value.trim(),
+          admin_pin: pinEl.value,
+          plan: 'free'
+        });
+        if(res.error) throw res.error;
+        var appUrl = window.location.origin + '/app?club=' + idEl.value;
+        document.getElementById('success-msg').textContent =
+          '"' + nameEl.value.trim() + '" 동호회가 등록됐어요!\n아래 링크를 복사해서 멤버들에게 공유하세요.';
+        document.getElementById('success-url').textContent = appUrl;
+        document.getElementById('go-app-btn').onclick = function(){ window.location.href = appUrl; };
+        document.getElementById('copy-url-btn').onclick = function(){
+          navigator.clipboard.writeText(appUrl).then(function(){
+            document.getElementById('copy-url-btn').textContent = '✓ 복사됐어요!';
+            setTimeout(function(){ document.getElementById('copy-url-btn').textContent = '🔗 링크 복사'; }, 2000);
+          });
+        };
+        showStep(3);
+      } catch(e) {
+        btn.disabled = false; btn.textContent = '등록 완료 🎉';
+        alert('등록 실패: ' + (e.message || '다시 시도해주세요'));
+      }
+    });
+
+    function showStep(n) {
+      document.getElementById('step1-card').style.display = n===1 ? '' : 'none';
+      document.getElementById('step2-card').style.display = n===2 ? '' : 'none';
+      document.getElementById('step3-card').style.display = n===3 ? '' : 'none';
+      [1,2,3].forEach(function(i){
+        document.getElementById('step'+i+'-dot').className = 'step' + (i===n?' active':'');
+      });
+    }
+  </script>
+</body>
+</html>
