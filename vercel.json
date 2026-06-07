@@ -1,4 +1,5 @@
 {
+  "alias": ["bmkr.vercel.app"],
   "rewrites": [
     { "source": "/register", "destination": "/register.html" },
     { "source": "/club/:club", "destination": "/app.html?club=:club" }
