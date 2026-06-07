@@ -18,6 +18,16 @@
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
+  <!-- 온보딩 팝업 -->
+  <div class="swap-overlay" id="onboarding-overlay" style="display:none" onclick="if(event.target===this)closeOnboarding()">
+    <div class="swap-sheet" style="text-align:center;padding:40px 24px 40px">
+      <div style="font-size:56px;margin-bottom:16px">🏸</div>
+      <div style="font-size:21px;font-weight:800;letter-spacing:-0.03em;margin-bottom:10px">환영해요!</div>
+      <div style="font-size:14px;color:var(--text2);font-weight:500;line-height:1.7;margin-bottom:28px">멤버를 추가하면 출석 체크와<br>자동 팀 배정을 바로 시작할 수 있어요.<br>지금 바로 첫 멤버를 추가해보세요.</div>
+      <button onclick="closeOnboarding()" style="width:100%;padding:15px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">멤버 추가하기 →</button>
+    </div>
+  </div>
+
   <!-- 수동 교체 팝업 -->
   <div class="swap-overlay" id="swap-overlay" style="display:none" onclick="if(event.target===this)closeSwapPopup()">
     <div class="swap-sheet">

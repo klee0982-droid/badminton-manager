@@ -62,29 +62,9 @@ function renderSelected() {
   byId('selected-strip').innerHTML=sel.length?sel.map(function(m){return '<button type="button" class="sel-pill" data-toggle="'+m.id+'">'+esc(m.name)+' ×</button>';}).join(''):'<span style="font-size:12px;color:var(--text3);font-weight:500">선택된 멤버 없음</span>';
 }
 function renderAttend() {
-  var isEmpty = members.length === 0;
-  // 멤버 없을 때 불필요한 UI 숨기기
-  var statRow = document.querySelector('.stat-row');
-  var configBlock = document.querySelector('.config-block');
-  var searchWrap = document.querySelector('.search-wrap');
-  var selectedStrip = byId('selected-strip');
-  var stickyCta = document.querySelector('.sticky-cta');
-  if(statRow) statRow.style.display = isEmpty ? 'none' : '';
-  if(configBlock) configBlock.style.display = isEmpty ? 'none' : '';
-  if(searchWrap) searchWrap.style.display = isEmpty ? 'none' : '';
-  if(selectedStrip) selectedStrip.style.display = isEmpty ? 'none' : '';
-  if(stickyCta) stickyCta.style.display = isEmpty ? 'none' : '';
-
-  if(isEmpty) {
-    byId('mgrid').innerHTML=
-      '<div style="text-align:center;padding:60px 24px">' +
-        '<div style="font-size:56px;margin-bottom:20px">🏸</div>' +
-        '<div style="font-size:20px;font-weight:800;margin-bottom:10px;letter-spacing:-0.03em">환영해요!</div>' +
-        '<div style="font-size:14px;color:var(--text2);font-weight:500;margin-bottom:28px;line-height:1.7">먼저 함께 칠 멤버를 추가해보세요.<br>멤버를 추가하면 출석 체크와 팀 배정을<br>바로 시작할 수 있어요.</div>' +
-        '<button onclick="gotoTab(\'members\')" style="padding:15px 32px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">멤버 추가하기 →</button>' +
-      '</div>';
-    return;
-  }
+  var ob = byId('onboarding-overlay');
+  if(ob) ob.style.display = members.length === 0 ? 'flex' : 'none';
+  if(members.length === 0) return;
 
   var term=norm(byId('attend-search').value);
   var filtered=members.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ko');}).filter(function(m){return matchesFn(m,term);});
@@ -221,6 +201,7 @@ function openSwapPopup(courtIdx, leaving) {
   byId('swap-overlay').style.display = 'flex';
 }
 function closeSwapPopup() { byId('swap-overlay').style.display = 'none'; }
+function closeOnboarding() { byId('onboarding-overlay').style.display = 'none'; gotoTab('members'); }
 
 // ── 결과 ──
 function renderResult() {
