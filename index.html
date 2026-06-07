@@ -70,7 +70,7 @@
     <p class="hero-sub">출석 체크부터 공정한 팀 배정, ELO 기반 실력 기록까지.<br>우리 동호회만의 전용 앱을 5분 안에 만들어보세요.</p>
     <div class="hero-btns">
       <a href="/register" class="btn-primary">우리 동호회 앱 만들기 →</a>
-      <a href="/kp-badminton" class="btn-secondary">데모 보기</a>
+      <a href="/club/kp-badminton" class="btn-secondary">데모 보기</a>
     </div>
   </section>
 
@@ -127,7 +127,7 @@
       result.textContent = '검색 중...'; result.style.color = 'var(--text3)';
       var res = await db.from('clubs').select('club_id,name').eq('club_id', id).maybeSingle();
       if(res.data) {
-        result.innerHTML = '✓ <strong>'+res.data.name+'</strong> 동호회를 찾았어요! <a href="/'+id+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
+        result.innerHTML = '✓ <strong>'+res.data.name+'</strong> 동호회를 찾았어요! <a href="/club/'+id+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
         result.style.color = 'var(--accent)';
       } else {
         result.textContent = '등록된 동호회를 찾을 수 없어요.';
