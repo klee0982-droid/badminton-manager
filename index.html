@@ -1582,8 +1582,47 @@
       }).join('');
       byId('r-games').innerHTML=gameLog.map(function(g,i){
         var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':'',ud=(g.expectedA<.5&&won==='A')||(g.expectedA>.5&&won==='B');
-        return '<div class="game-log"><div class="game-num">게임 '+(i+1)+' · '+g.courtName+(ud?' · 업셋':'')+'</div><div class="game-teams"><div class="game-team">'+g.teamA.map(function(p){return '<span class="ptag ta" style="font-size:12px;padding:4px 8px;min-height:0">'+esc(p.name)+'</span>';}).join('')+'</div><div class="gscore '+(won==='A'?'win':won==='B'?'lose':'')+'">'+g.scoreA+'</div><span style="color:var(--text3);font-size:12px">:</span><div class="gscore '+(won==='B'?'win':won==='A'?'lose':'')+'">'+g.scoreB+'</div><div class="game-team" style="justify-content:flex-end">'+g.teamB.map(function(p){return '<span class="ptag tb" style="font-size:12px;padding:4px 8px;min-height:0">'+esc(p.name)+'</span>';}).join('')+'</div></div><div class="game-note">A '+(g.deltaA>=0?'+':'')+g.deltaA+' · B '+(g.deltaB>=0?'+':'')+g.deltaB+'</div></div>';
+        return '<div class="game-log"><div class="game-num" style="display:flex;justify-content:space-between;align-items:center">'+
+          '<span>게임 '+(i+1)+' · '+g.courtName+(ud?' · 업셋':'')+'</span>'+
+          (isAdmin?'<button class="mini-btn swap" data-edit-game="'+i+'">수정</button>':'')+
+        '</div>'+
+        '<div class="game-teams"><div class="game-team">'+g.teamA.map(function(p){return '<span class="ptag ta" style="font-size:12px;padding:4px 8px;min-height:0">'+esc(p.name)+'</span>';}).join('')+'</div>'+
+        '<div id="game-score-'+i+'" style="display:flex;align-items:center;gap:4px">'+
+          '<div class="gscore '+(won==='A'?'win':won==='B'?'lose':'')+'">'+g.scoreA+'</div>'+
+          '<span style="color:var(--text3);font-size:12px">:</span>'+
+          '<div class="gscore '+(won==='B'?'win':won==='A'?'lose':'')+'">'+g.scoreB+'</div>'+
+        '</div>'+
+        '<div class="game-team" style="justify-content:flex-end">'+g.teamB.map(function(p){return '<span class="ptag tb" style="font-size:12px;padding:4px 8px;min-height:0">'+esc(p.name)+'</span>';}).join('')+'</div></div>'+
+        '<div class="game-note">A '+(g.deltaA>=0?'+':'')+g.deltaA+' · B '+(g.deltaB>=0?'+':'')+g.deltaB+'</div></div>';
       }).join('');
+    }
+    function editGame(idx) {
+      var g = gameLog[idx];
+      if(!g) return;
+      var newA = prompt('A팀 점수 (현재: '+g.scoreA+')', g.scoreA);
+      if(newA===null) return;
+      var newB = prompt('B팀 점수 (현재: '+g.scoreB+')', g.scoreB);
+      if(newB===null) return;
+      newA = Math.max(0, Math.min(99, Number(newA)||0));
+      newB = Math.max(0, Math.min(99, Number(newB)||0));
+
+      // 기존 ELO 델타 제거
+      g.teamA.forEach(function(p){ eloDeltas[p.id]=(eloDeltas[p.id]||0)-g.deltaA; });
+      g.teamB.forEach(function(p){ eloDeltas[p.id]=(eloDeltas[p.id]||0)-g.deltaB; });
+
+      // 새 점수로 ELO 재계산
+      var ch = calcElo(g.teamA, g.teamB, newA, newB);
+      g.scoreA=newA; g.scoreB=newB;
+      g.deltaA=ch.deltaA; g.deltaB=ch.deltaB;
+      g.expectedA=ch.expectedA; g.margin=ch.margin;
+
+      // 새 ELO 델타 반영
+      g.teamA.forEach(function(p){ eloDeltas[p.id]=(eloDeltas[p.id]||0)+ch.deltaA; });
+      g.teamB.forEach(function(p){ eloDeltas[p.id]=(eloDeltas[p.id]||0)+ch.deltaB; });
+
+      currentSessionSaved=false;
+      renderResult();
+      showMsg('게임 '+(idx+1)+' 점수 수정 완료!','info');
     }
     function saveSession(status) {
       if(!gameLog.length||currentSessionSaved)return;
@@ -1935,6 +1974,7 @@
         var cf=e.target.closest('[data-court-finish]');if(cf){courtFinished(Number(cf.getAttribute('data-court-finish')));return;}
         var d=e.target.closest('[data-del]');if(d){delMember(d.getAttribute('data-del'));return;}
       });
+        var eg=e.target.closest('[data-edit-game]');if(eg){if(requireAdmin())editGame(Number(eg.getAttribute('data-edit-game')));return;}
         var eloDebounceTimer = null;
           document.body.addEventListener('input',function(e){
           if(e.target.matches('[data-elo-id]')){
