@@ -232,10 +232,12 @@ function roundName(t, ri) {
 
 // ── 브래킷 트리 (본선) ──
 function renderBracketTree(t, rounds, startRi) {
-  var RW  = 112, CW = 18, TH = 26, DH = 2, MH = TH*2+DH, LH = 18, SH = 72;
+  var CW = 18, TH = 26, DH = 2, MH = TH*2+DH, LH = 18;
   var nR  = rounds.length;
-  // BH는 라운드 중 최대 슬롯 수 기준 (예선 때문에 round 0이 작을 수 있음)
   var n0  = Math.max.apply(null, rounds.map(function(r){ return r.length; }));
+  // 슬롯 수에 따라 높이·폭 자동 조정
+  var SH  = n0 <= 4 ? 72 : n0 <= 8 ? 64 : n0 <= 16 ? 54 : 46;
+  var RW  = n0 <= 8 ? 112 : n0 <= 16 ? 100 : 90;
   var BH  = n0 * SH;
   var totalW = nR * RW + (nR-1) * CW;
   var totalH = BH + LH;
@@ -319,27 +321,60 @@ function renderBracketView(t) {
   // 예선 카드
   var r0 = t.rounds[0];
   var isCurrR0 = t.rounds.length === 1 && t.status === 'active';
+  var manyPrelim = r0.length > 4;
   html += '<div style="margin-bottom:12px">';
-  html += '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.05em;margin-bottom:7px">예선전</div>';
-  r0.forEach(function(m, mi) {
-    var w1=m.winner===1, w2=m.winner===2, done=m.winner!==null;
-    var canClick = isCurrR0 && !done && isAdmin;
-    var s1=getSeedNum(t,m.t1), s2=getSeedNum(t,m.t2);
-    html += '<div style="display:flex;align-items:stretch;gap:6px;margin-bottom:6px">';
-    var mk = function(side, team, w, s) {
-      var bg=w?'var(--accent-light)':'var(--surface2)', br=w?'var(--accent)':'var(--border)', fc=w?'var(--accent)':(done?'var(--text3)':'var(--text)');
-      return '<div '+(canClick?'data-win="'+t.id+':0:'+mi+':'+side+'"':'')+
-        ' style="flex:1;padding:10px 8px;background:'+bg+';border:1.5px solid '+br+';border-radius:var(--radius-sm);'
-        +'font-size:13px;font-weight:'+(w?'800':'600')+';color:'+fc+';cursor:'+(canClick?'pointer':'default')+';text-align:center">'
-        +(s?'<span style="font-size:10px;opacity:.6">'+s+'시드 </span>':'')
-        +esc(tLabel(team,t.type).replace(/<[^>]+>/g,''))+(w?' ✓':'')+'</div>';
-    };
-    html += mk(1, m.t1, w1, s1);
-    html += '<div style="display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text3);min-width:28px">'+(m.score||'vs')+'</div>';
-    html += mk(2, m.t2, w2, s2);
-    if(done && isAdmin && isCurrR0) html += '<button data-undo="'+t.id+':0:'+mi+'" style="padding:4px 8px;border:none;background:none;color:var(--text3);font-size:12px;cursor:pointer;align-self:center">↩</button>';
+  html += '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.05em;margin-bottom:7px">'
+    + '예선전 <span style="font-weight:500">('+r0.length+'경기)</span></div>';
+
+  if(manyPrelim) {
+    // 5경기 이상: 2열 컴팩트 그리드
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px">';
+    r0.forEach(function(m, mi) {
+      var w1=m.winner===1, w2=m.winner===2, done=m.winner!==null;
+      var canClick = isCurrR0 && !done && isAdmin;
+      var s1=getSeedNum(t,m.t1), s2=getSeedNum(t,m.t2);
+      var border = done ? '1.5px solid '+(w1||w2?'var(--accent)':'var(--border)') : '1.5px solid var(--border)';
+      var bg = done ? (w1||w2?'var(--accent-light)':'var(--surface2)') : 'var(--surface2)';
+      html += '<div style="background:'+bg+';border:'+border+';border-radius:8px;padding:7px 8px">';
+      html += '<div style="font-size:9px;color:var(--text3);margin-bottom:3px">경기 '+(mi+1)+'</div>';
+      // 팀1
+      var fc1=w1?'var(--accent)':(done?'var(--text3)':'var(--text)');
+      html += '<div '+(canClick?'data-win="'+t.id+':0:'+mi+':1"':'')+
+        ' style="font-size:12px;font-weight:'+(w1?'800':'600')+';color:'+fc1+';cursor:'+(canClick?'pointer':'default')+';padding:3px 0">'
+        +'<span style="font-size:9px;opacity:.5">'+s1+'시드 </span>'+esc(tLabel(m.t1,t.type).replace(/<[^>]+>/g,''))+(w1?' ✓':'')+'</div>';
+      html += '<div style="font-size:9px;color:var(--text3);text-align:center;margin:1px 0">'+(m.score||'vs')+'</div>';
+      // 팀2
+      var fc2=w2?'var(--accent)':(done?'var(--text3)':'var(--text)');
+      html += '<div '+(canClick?'data-win="'+t.id+':0:'+mi+':2"':'')+
+        ' style="font-size:12px;font-weight:'+(w2?'800':'600')+';color:'+fc2+';cursor:'+(canClick?'pointer':'default')+';padding:3px 0">'
+        +'<span style="font-size:9px;opacity:.5">'+s2+'시드 </span>'+esc(tLabel(m.t2,t.type).replace(/<[^>]+>/g,''))+(w2?' ✓':'')+'</div>';
+      if(done && isAdmin && isCurrR0) html += '<div data-undo="'+t.id+':0:'+mi+'" style="font-size:10px;color:var(--text3);cursor:pointer;text-align:right;margin-top:2px">↩ 취소</div>';
+      html += '</div>';
+    });
     html += '</div>';
-  });
+  } else {
+    // 4경기 이하: 기존 가로 레이아웃
+    r0.forEach(function(m, mi) {
+      var w1=m.winner===1, w2=m.winner===2, done=m.winner!==null;
+      var canClick = isCurrR0 && !done && isAdmin;
+      var s1=getSeedNum(t,m.t1), s2=getSeedNum(t,m.t2);
+      html += '<div style="display:flex;align-items:stretch;gap:6px;margin-bottom:6px">';
+      var mk = function(side, team, w, s) {
+        var bg=w?'var(--accent-light)':'var(--surface2)', br=w?'var(--accent)':'var(--border)', fc=w?'var(--accent)':(done?'var(--text3)':'var(--text)');
+        return '<div '+(canClick?'data-win="'+t.id+':0:'+mi+':'+side+'"':'')+
+          ' style="flex:1;padding:10px 8px;background:'+bg+';border:1.5px solid '+br+';border-radius:var(--radius-sm);'
+          +'font-size:13px;font-weight:'+(w?'800':'600')+';color:'+fc+';cursor:'+(canClick?'pointer':'default')+';text-align:center">'
+          +(s?'<span style="font-size:10px;opacity:.6">'+s+'시드 </span>':'')
+          +esc(tLabel(team,t.type).replace(/<[^>]+>/g,''))+(w?' ✓':'')+'</div>';
+      };
+      html += mk(1, m.t1, w1, s1);
+      html += '<div style="display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text3);min-width:28px">'+(m.score||'vs')+'</div>';
+      html += mk(2, m.t2, w2, s2);
+      if(done && isAdmin && isCurrR0) html += '<button data-undo="'+t.id+':0:'+mi+'" style="padding:4px 8px;border:none;background:none;color:var(--text3);font-size:12px;cursor:pointer;align-self:center">↩</button>';
+      html += '</div>';
+    });
+  }
+
   if(t.rounds.length === 1) {
     html += '<div style="text-align:center;padding:10px;font-size:12px;color:var(--text3)">예선 완료 후 본선 대진이 확정됩니다</div>';
   }
