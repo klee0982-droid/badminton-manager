@@ -1653,19 +1653,28 @@
       m.gender=m.gender==='F'?'M':'F'; renderManage(); await syncMembers();
     }
       async function delMember(id) {
-        if(!requireAdmin())return;
-        id=Number(id);
-        var m=members.find(function(x){return x.id===id;});
-        if(!m)return;
-        if(!confirm('"'+m.name+'"을(를) 삭제할까요?'))return;
-        members=members.filter(function(x){return x.id!==id;});
-        present.delete(id);
-        renderAll();
+      if(!requireAdmin())return;
+      id=Number(id);
+      var m=members.find(function(x){return x.id===id;});
+      if(!m)return;
+      if(!confirm('"'+m.name+'"을(를) 삭제할까요?'))return;
+      var backup=members.slice();
+      members=members.filter(function(x){return x.id!==id;});
+      present.delete(id);
+      renderAll();
       try {
-        await db.from('badminton_members').delete().eq('club_id',CLUB_ID).eq('member_id',id);
+        var res=await db.from('badminton_members').delete().eq('club_id',CLUB_ID).eq('member_id',id);
+        if(res.error) throw res.error;
         setSyncBadge('저장됨','ok');
-      } catch(e){ console.warn('delMember:',e?.message||String(e)); setSyncBadge('오류','bad'); }
-      saveLocal();
+        saveLocal();
+      } catch(e){
+        members=backup;
+        present.add(id);
+        renderAll();
+        setSyncBadge('오류','bad');
+        showMsg('"'+m.name+'" 삭제 실패. 다시 시도해주세요.','warn');
+        console.warn('delMember:',e?.message||String(e));
+      }
     }
 
     function renderPlayerSearch() {
@@ -1898,7 +1907,18 @@
         var cf=e.target.closest('[data-court-finish]');if(cf){courtFinished(Number(cf.getAttribute('data-court-finish')));return;}
         var d=e.target.closest('[data-del]');if(d){delMember(d.getAttribute('data-del'));return;}
       });
-      document.body.addEventListener('change',function(e){if(e.target.matches('[data-elo-id]'))updateElo(e.target.getAttribute('data-elo-id'),e.target.value);});
+        var eloDebounceTimer = null;
+          document.body.addEventListener('input',function(e){
+          if(e.target.matches('[data-elo-id]')){
+          clearTimeout(eloDebounceTimer);
+          e.target.style.borderColor = 'var(--warn)';
+          eloDebounceTimer = setTimeout(function(){
+            updateElo(e.target.getAttribute('data-elo-id'), e.target.value);
+            e.target.style.borderColor = 'var(--accent)';
+          setTimeout(function(){ e.target.style.borderColor = ''; }, 1000);
+        }, 1000);
+        }
+      });
       byId('attend-search').addEventListener('input',renderAttend);
       byId('member-search').addEventListener('input',renderManage);
       byId('player-search').addEventListener('input',renderPlayerSearch);
