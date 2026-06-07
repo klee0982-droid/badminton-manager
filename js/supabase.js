@@ -28,6 +28,17 @@ async function syncHistory() {
   } catch(e) { console.warn('syncHistory:',e?.message||String(e)); setSyncBadge('오류','bad'); }
 }
 
+async function updateClubSettings(currentPin, newName, newPin) {
+  var res = await db.rpc('update_club_settings', {
+    p_club_id: CLUB_ID,
+    p_current_pin: currentPin,
+    p_new_name: newName,
+    p_new_pin: newPin
+  });
+  if(res.error) throw res.error;
+  return res.data; // true = 성공, false = PIN 불일치
+}
+
 async function saveGameState() {
   try {
     var state = courts.some(function(c){return c!==null;}) || waitQueue.length

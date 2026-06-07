@@ -296,6 +296,64 @@ function clearHistory() {
   byId('data-msg').textContent='삭제 완료. Supabase는 Table Editor에서 직접 삭제하세요.';
 }
 
+// ── 공유 ──
+function openShare() {
+  var url = window.location.origin + '/club/' + CLUB_ID;
+  byId('share-url-display').textContent = url;
+  var nativeBtn = byId('share-native-btn');
+  if(navigator.share) {
+    nativeBtn.style.display = '';
+    nativeBtn.onclick = function() {
+      navigator.share({ title: document.title, url: url });
+    };
+  }
+  byId('share-copy-btn').textContent = '링크 복사';
+  byId('share-copy-btn').onclick = function() {
+    navigator.clipboard.writeText(url).then(function() {
+      byId('share-copy-btn').textContent = '✓ 복사됐어요!';
+      setTimeout(function(){ byId('share-copy-btn').textContent = '링크 복사'; }, 2000);
+    });
+  };
+  byId('share-overlay').style.display = 'flex';
+}
+function closeShare() { byId('share-overlay').style.display = 'none'; }
+
+// ── 클럽 설정 ──
+async function saveClubSettings() {
+  var name = byId('settings-name').value.trim();
+  var newPin = byId('settings-new-pin').value.trim();
+  var currentPin = byId('settings-current-pin').value.trim();
+  var msgEl = byId('settings-msg');
+  var btn = byId('settings-save-btn');
+  if(!name || name.length < 2) { showSettingsMsg('동호회 이름을 2자 이상 입력해주세요.', 'warn'); return; }
+  if(!newPin || newPin.length < 4) { showSettingsMsg('PIN은 4자리 이상이어야 해요.', 'warn'); return; }
+  if(!currentPin) { showSettingsMsg('현재 PIN을 입력해주세요.', 'warn'); return; }
+  btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    var ok = await updateClubSettings(currentPin, name, newPin);
+    if(ok) {
+      ADMIN_PIN = newPin;
+      var titleEl = document.querySelector('.header-title');
+      if(titleEl) titleEl.textContent = name;
+      document.title = name + ' · 배드민턴 매니저';
+      byId('settings-current-pin').value = '';
+      showSettingsMsg('✓ 저장됐어요!', 'ok');
+    } else {
+      showSettingsMsg('현재 PIN이 맞지 않아요.', 'error');
+    }
+  } catch(e) {
+    showSettingsMsg('오류: ' + (e.message || '다시 시도해주세요'), 'error');
+  }
+  btn.disabled = false; btn.textContent = '저장';
+}
+function showSettingsMsg(msg, type) {
+  var el = byId('settings-msg');
+  el.textContent = msg;
+  el.style.color = type==='ok' ? 'var(--accent)' : type==='warn' ? 'var(--warn, #b45309)' : 'var(--danger)';
+  el.style.display = '';
+  setTimeout(function(){ el.style.display = 'none'; }, 3000);
+}
+
 // ── 테스트 ──
 function runTests() {
   var f=[];
@@ -401,6 +459,7 @@ function bind() {
   byId('copy-btn').addEventListener('click',copyData);
   byId('import-btn').addEventListener('click',importData);
   byId('clear-history-btn').addEventListener('click',function(){ if(window.confirm('세션 기록을 모두 삭제할까요?')) clearHistory(); });
+  byId('settings-save-btn').addEventListener('click', saveClubSettings);
 }
 
 // ── 초기화 ──

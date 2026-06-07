@@ -28,6 +28,18 @@
     </div>
   </div>
 
+  <!-- 공유 팝업 -->
+  <div class="swap-overlay" id="share-overlay" style="display:none" onclick="if(event.target===this)closeShare()">
+    <div class="swap-sheet" style="padding:24px 20px 32px">
+      <div class="swap-title">🔗 동호회 링크 공유</div>
+      <div style="font-size:13px;color:var(--text2);font-weight:500;margin-bottom:16px">멤버들에게 이 링크를 공유하세요.<br>링크만 있으면 바로 현황을 볼 수 있어요.</div>
+      <div style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;font-family:ui-monospace,monospace;word-break:break-all;margin-bottom:12px" id="share-url-display"></div>
+      <button id="share-copy-btn" style="width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px">링크 복사</button>
+      <button id="share-native-btn" style="width:100%;padding:14px;background:var(--surface2);color:var(--text);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;display:none">공유하기 (카카오 등)</button>
+      <button onclick="closeShare()" style="width:100%;padding:12px;background:none;color:var(--text3);border:none;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;margin-top:4px">닫기</button>
+    </div>
+  </div>
+
   <!-- 수동 교체 팝업 -->
   <div class="swap-overlay" id="swap-overlay" style="display:none" onclick="if(event.target===this)closeSwapPopup()">
     <div class="swap-sheet">
@@ -44,6 +56,7 @@
         <div class="header-title">배드민턴</div>
         <div class="header-sub">출석 · 매칭 · 기록</div>
       </div>
+      <button onclick="openShare()" style="background:none;border:none;cursor:pointer;font-size:20px;padding:4px 8px;line-height:1" title="링크 공유">🔗</button>
       <div class="sync-pill" id="sync-badge">동기화 중</div>
     </div>
 
@@ -263,6 +276,23 @@
       <div class="section-header">
         <div class="section-title">데이터</div>
         <div class="section-desc">백업 및 세션 기록</div>
+      </div>
+      <div class="card" id="settings-card" style="display:none">
+        <div class="card-title">동호회 설정</div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label" style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">동호회 이름</label>
+          <input type="text" id="settings-name" class="form-input" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text)" maxlength="30" />
+        </div>
+        <div class="form-group" style="margin-bottom:12px">
+          <label class="form-label" style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">새 관리자 PIN <span style="font-weight:500;color:var(--text3)">(바꾸지 않으려면 현재 PIN 입력)</span></label>
+          <input type="password" id="settings-new-pin" class="form-input" inputmode="numeric" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text)" maxlength="6" />
+        </div>
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label" style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">현재 PIN 확인 *</label>
+          <input type="password" id="settings-current-pin" class="form-input" inputmode="numeric" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;background:var(--surface);color:var(--text)" maxlength="6" />
+        </div>
+        <div id="settings-msg" style="font-size:12px;font-weight:600;margin-bottom:10px;display:none"></div>
+        <button class="btn primary" id="settings-save-btn" style="width:100%;padding:13px">저장</button>
       </div>
       <div class="card">
         <div class="card-title">연결 상태</div>

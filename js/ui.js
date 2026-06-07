@@ -5,6 +5,15 @@ function renderAdmin() {
   byId('admin-login-btn').style.display  = isAdmin ? 'none' : '';
   byId('admin-logout-btn').style.display = isAdmin ? '' : 'none';
   byId('admin-pin').style.display        = isAdmin ? 'none' : '';
+  var sc = byId('settings-card');
+  if(sc) {
+    sc.style.display = isAdmin ? '' : 'none';
+    if(isAdmin) {
+      var titleEl = document.querySelector('.header-title');
+      var nameInput = byId('settings-name');
+      if(nameInput && titleEl && !nameInput.value) nameInput.value = titleEl.textContent;
+    }
+  }
 }
 function requireAdmin() {
   if(isAdmin) return true;
