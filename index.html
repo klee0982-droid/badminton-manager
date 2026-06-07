@@ -1638,13 +1638,20 @@
     async function addMember() {
       if(!requireAdmin())return;
       var name=byId('n-name').value.trim(); if(!name)return;
-      // 중복 이름 체크
+      // 중복 이름 체크 → 동명이인이면 A~Z suffix 자동 부여
+      var finalName = name;
       if(members.some(function(m){return norm(m.name)===norm(name);})){
-        showMsg('"'+name+'"은(는) 이미 있는 이름이에요.','warn'); return;
+        var suffix = 'B';
+        while(members.some(function(m){return norm(m.name)===norm(name+' '+suffix);})){
+          suffix = String.fromCharCode(suffix.charCodeAt(0)+1);
+          if(suffix>'Z'){showMsg('동명이인이 너무 많아요.','warn');return;}
+        }
+        finalName = name+' '+suffix;
+        showMsg('"'+name+'"이 이미 있어 "'+finalName+'"으로 등록돼요.','warn');
       }
       var elo=Math.max(100,Math.min(3000,Number(byId('n-elo').value)||1000));
       var newId=nextMemberId++;
-      members.push({id:newId,name:name,elo:elo,gender:byId('n-gender').value});
+      members.push({id:newId,name:finalName,elo:elo,gender:byId('n-gender').value});
       byId('n-name').value='';
       renderAll();
       // 추가된 멤버 row 하이라이트
@@ -1661,7 +1668,7 @@
         }
       }, 50);
       await syncMembers();
-      showMsg('"'+name+'" 추가 완료!','info');
+      showMsg('"'+finalName+'" 추가 완료!','info');
     }
     async function updateElo(id,val) {
       if(!requireAdmin())return;
