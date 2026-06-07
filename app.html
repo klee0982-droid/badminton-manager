@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>배드민턴 매니저</title>
   <script>
-    // URL 파라미터에서 club_id 읽기 - JS 로드 전에 미리 설정
-    var _clubId = new URLSearchParams(window.location.search).get('club');
+    // URL 파라미터 또는 pathname(/club/:id)에서 club_id 읽기
+    var _pathMatch = window.location.pathname.match(/^\/club\/([^/]+)/);
+    var _clubId = new URLSearchParams(window.location.search).get('club')
+      || (_pathMatch && _pathMatch[1]);
     if(!_clubId) {
-      // club 파라미터 없으면 등록 페이지로
       window.location.href = '/';
     }
   </script>
