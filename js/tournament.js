@@ -28,14 +28,13 @@ function teamAvgElo(team) {
 // ── 브래킷 로직 ──
 function pow2ceil(n) { var p = 1; while(p < n) p *= 2; return p; }
 
-function buildR1(teams) {
-  // ELO 내림차순 정렬 → 시드 배정
-  var sorted = teams.slice().sort(function(a, b){ return teamAvgElo(b) - teamAvgElo(a); });
+// 정원이 2의 배수일 때 표준 시드 브래킷 생성
+function buildFullBracket(sorted) {
   var size = pow2ceil(Math.max(sorted.length, 2));
-  var order = seededSlots(size); // 시드 순서 → 슬롯 위치
+  var order = seededSlots(size);
   var slots = new Array(size).fill(null);
   order.forEach(function(seedIdx, slotIdx) {
-    slots[slotIdx] = sorted[seedIdx] || null; // 시드 범위 초과 → null(부전승)
+    slots[slotIdx] = sorted[seedIdx] || null;
   });
   var out = [];
   for(var i = 0; i < slots.length; i += 2) {
@@ -54,8 +53,14 @@ function roundWinners(round) {
   }).filter(Boolean);
 }
 
-function buildNextRound(round) {
+// t를 받아서 예선→본선 전환 처리
+function buildNextRound(round, t) {
   var w = roundWinners(round);
+  // 예선 완료 → directToR1 시드와 합쳐서 본선 브래킷 생성
+  if(t && t.directToR1 && t.directToR1.length > 0 && t.rounds.length === 1) {
+    var all = w.concat(t.directToR1).sort(function(a, b){ return teamAvgElo(b) - teamAvgElo(a); });
+    return buildFullBracket(all);
+  }
   if(w.length <= 1) return null;
   var out = [];
   for(var i = 0; i < w.length; i += 2) {
@@ -67,7 +72,7 @@ function buildNextRound(round) {
 
 function collapseByeRounds(t) {
   while(t.rounds[t.rounds.length - 1].every(function(m){ return m.winner !== null; })) {
-    var next = buildNextRound(t.rounds[t.rounds.length - 1]);
+    var next = buildNextRound(t.rounds[t.rounds.length - 1], t);
     if(!next) { finalizeChampion(t); break; }
     t.rounds.push(next);
   }
@@ -81,18 +86,38 @@ function finalizeChampion(t) {
 
 function startTourney() {
   var teams = _td.teams;
-  var totalRounds = Math.ceil(Math.log2(Math.max(teams.length, 2)));
-  var r1 = buildR1(teams);
-  // 시드 순서 기록 (표시용)
-  var seededOrder = teams.slice().sort(function(a, b){ return teamAvgElo(b) - teamAvgElo(a); });
+  var sorted = teams.slice().sort(function(a, b){ return teamAvgElo(b) - teamAvgElo(a); });
+  var B       = pow2ceil(Math.max(sorted.length, 2));
+  var B_half  = B / 2;
+  var isPow2  = sorted.length === B;
+
+  var r0, directToR1;
+
+  if(isPow2) {
+    r0          = buildFullBracket(sorted);
+    directToR1  = [];
+  } else {
+    // 비2의배수: 하위 시드끼리 예선, 상위 시드는 본선 직행
+    var prelim  = sorted.length - B_half;          // 예선 경기 수
+    var nPrelim = prelim * 2;                       // 예선 참가 인원 수
+    directToR1  = sorted.slice(0, sorted.length - nPrelim); // 본선 직행 (상위)
+    var pTeams  = sorted.slice(sorted.length - nPrelim);    // 예선 참가 (하위)
+    r0 = [];
+    for(var i = 0; i < prelim; i++) {
+      // BWF: 높은시드 vs 낮은시드 페어링
+      r0.push({ t1: pTeams[i], t2: pTeams[nPrelim - 1 - i], winner: null, score: '' });
+    }
+  }
+
   var t = {
     id: Date.now(),
     name: _td.name,
     type: _td.type,
     teams: teams,
-    seededOrder: seededOrder,
-    rounds: [r1],
-    totalRounds: totalRounds,
+    seededOrder: sorted,
+    rounds: [r0],
+    totalRounds: Math.ceil(Math.log2(B)),
+    directToR1: directToR1,
     status: 'active',
     champion: null
   };
@@ -148,7 +173,7 @@ function confirmTourneyScore() {
   m.score = score;
   var round = t.rounds[p.ri];
   if(round.every(function(m){ return m.winner !== null; })) {
-    var next = buildNextRound(round);
+    var next = buildNextRound(round, t);
     if(!next) finalizeChampion(t);
     else { t.rounds.push(next); collapseByeRounds(t); }
   }
@@ -196,131 +221,136 @@ function seedBadge(num) {
   return '<span style="font-size:10px;background:var(--surface2);color:var(--text3);border-radius:10px;padding:1px 6px;font-weight:600;margin-right:4px">'+num+'번</span>';
 }
 
-var R_NAMES = { 1: '결승', 2: '준결승', 3: '4강', 4: '8강', 5: '16강', 6: '32강', 7: '64강' };
 function roundName(t, ri) {
-  var rem = t.totalRounds - ri;
-  return R_NAMES[rem] || (Math.pow(2, rem) + '강');
+  // 예선 라운드
+  if(t.directToR1 && t.directToR1.length > 0 && ri === 0) return '예선';
+  // 슬롯 수 × 2 = 이 라운드 참가 팀 수
+  var n = t.rounds[ri].length * 2;
+  var names = { 2:'결승', 4:'준결승', 8:'8강', 16:'16강', 32:'32강', 64:'64강' };
+  return names[n] || (n + '강');
 }
 
-// ── 브래킷 트리 렌더링 ──
-function renderBracketView(t) {
-  var RW   = 112;  // round column width
-  var CW   = 18;   // connector column width
-  var TH   = 26;   // team row height
-  var DH   = 2;    // score divider height
-  var MH   = TH * 2 + DH; // 54px per match block
-  var LH   = 18;   // label height
-  var SH   = 72;   // slot height per match in round-0
-
-  var rounds = t.rounds;
-  var nR     = rounds.length;
-  var n0     = rounds[0].length;
-  var BH     = n0 * SH;
-  var totalW = nR * RW + (nR - 1) * CW;
+// ── 브래킷 트리 (본선) ──
+function renderBracketTree(t, rounds, startRi) {
+  var RW  = 112, CW = 18, TH = 26, DH = 2, MH = TH*2+DH, LH = 18, SH = 72;
+  var nR  = rounds.length;
+  // BH는 라운드 중 최대 슬롯 수 기준 (예선 때문에 round 0이 작을 수 있음)
+  var n0  = Math.max.apply(null, rounds.map(function(r){ return r.length; }));
+  var BH  = n0 * SH;
+  var totalW = nR * RW + (nR-1) * CW;
   var totalH = BH + LH;
 
-  var divs = '';
-  var svg  = '';
+  var divs = '', svg = '';
 
-  rounds.forEach(function(round, ri) {
+  rounds.forEach(function(round, lri) {
+    var ri     = startRi + lri;
     var N      = round.length;
     var slotH  = BH / N;
-    var colX   = ri * (RW + CW);
-    var isCurr = ri === nR - 1 && t.status === 'active';
+    var colX   = lri * (RW + CW);
+    var isCurr = ri === t.rounds.length - 1 && t.status === 'active';
 
-    // Round label
     divs += '<div style="position:absolute;left:'+colX+'px;top:0;width:'+RW+'px;height:'+LH+'px;'
       + 'text-align:center;font-size:9px;font-weight:700;letter-spacing:.03em;'
       + 'color:'+(isCurr?'var(--accent)':'var(--text3)')+';line-height:'+LH+'px">'
       + roundName(t, ri) + '</div>';
 
     round.forEach(function(m, mi) {
-      // Skip fully-empty slot (no teams)
       if(!m.t1 && !m.t2) return;
-
-      var cy    = LH + (mi + 0.5) * slotH;
-      var topY  = cy - MH / 2;
-      var w1    = m.winner === 1, w2 = m.winner === 2;
-      var done  = m.winner !== null;
+      var cy   = LH + (mi+0.5)*slotH;
+      var topY = cy - MH/2;
+      var w1=m.winner===1, w2=m.winner===2, done=m.winner!==null;
       var isBye = !m.t1 || !m.t2;
       var canClick = isCurr && !done && !isBye && isAdmin;
-      var s1    = getSeedNum(t, m.t1), s2 = getSeedNum(t, m.t2);
+      var s1=getSeedNum(t,m.t1), s2=getSeedNum(t,m.t2);
 
-      var bg1 = w1 ? 'var(--accent-light)' : 'var(--surface2)';
-      var br1 = w1 ? 'var(--accent)' : 'var(--border)';
-      var fc1 = w1 ? 'var(--accent)' : (done && !w1 ? 'var(--text3)' : (!m.t1 ? 'var(--text3)' : 'var(--text)'));
-      var bg2 = w2 ? 'var(--accent-light)' : 'var(--surface2)';
-      var br2 = w2 ? 'var(--accent)' : 'var(--border)';
-      var fc2 = w2 ? 'var(--accent)' : (done && !w2 ? 'var(--text3)' : (!m.t2 ? 'var(--text3)' : 'var(--text)'));
+      var bg1=w1?'var(--accent-light)':'var(--surface2)', br1=w1?'var(--accent)':'var(--border)';
+      var fc1=w1?'var(--accent)':(done&&!w1?'var(--text3)':(!m.t1?'var(--text3)':'var(--text))'));
+      var bg2=w2?'var(--accent-light)':'var(--surface2)', br2=w2?'var(--accent)':'var(--border)';
+      var fc2=w2?'var(--accent)':(done&&!w2?'var(--text3)':(!m.t2?'var(--text3)':'var(--text))'));
+      var t1txt=m.t1?tLabel(m.t1,t.type).replace(/<[^>]+>/g,''):'TBD';
+      var t2txt=m.t2?tLabel(m.t2,t.type).replace(/<[^>]+>/g,''):'TBD';
+      var da1=canClick?' data-win="'+t.id+':'+ri+':'+mi+':1"':'';
+      var da2=canClick?' data-win="'+t.id+':'+ri+':'+mi+':2"':'';
+      var bs='position:absolute;width:'+RW+'px;height:'+TH+'px;display:flex;align-items:center;'
+        +'padding:0 7px;overflow:hidden;white-space:nowrap;box-sizing:border-box;'
+        +'font-size:11px;font-weight:'+(w1||w2?'800':'600')+';cursor:'+(canClick?'pointer':'default')+';';
 
-      var t1txt = m.t1 ? tLabel(m.t1, t.type).replace(/<[^>]+>/g, '') : 'BYE';
-      var t2txt = m.t2 ? tLabel(m.t2, t.type).replace(/<[^>]+>/g, '') : 'BYE';
-      var dattr1 = canClick ? ' data-win="'+t.id+':'+ri+':'+mi+':1"' : '';
-      var dattr2 = canClick ? ' data-win="'+t.id+':'+ri+':'+mi+':2"' : '';
+      divs += '<div'+da1+' style="'+bs+'left:'+colX+'px;top:'+topY+'px;background:'+bg1+';border:1px solid '+br1+';border-radius:4px 4px 0 0;color:'+fc1+'">'
+        +(s1&&m.t1?'<b style="font-size:9px;min-width:12px;opacity:.45;flex-shrink:0">'+s1+'</b>':'')
+        +'<span style="overflow:hidden;text-overflow:ellipsis">'+t1txt+(w1?' ✓':'')+'</span></div>';
+      divs += '<div style="position:absolute;left:'+colX+'px;top:'+(topY+TH)+'px;width:'+RW+'px;height:'+DH+'px;background:var(--border)">'
+        +(m.score&&done?'<span style="position:absolute;right:4px;top:-8px;font-size:9px;color:var(--text3)">'+esc(m.score)+'</span>':'')+'</div>';
+      divs += '<div'+da2+' style="'+bs+'left:'+colX+'px;top:'+(topY+TH+DH)+'px;background:'+bg2+';border:1px solid '+br2+';border-radius:0 0 4px 4px;color:'+fc2+'">'
+        +(s2&&m.t2?'<b style="font-size:9px;min-width:12px;opacity:.45;flex-shrink:0">'+s2+'</b>':'')
+        +'<span style="overflow:hidden;text-overflow:ellipsis">'+t2txt+(w2?' ✓':'')+'</span></div>';
 
-      var baseStyle = 'position:absolute;width:'+RW+'px;height:'+TH+'px;display:flex;align-items:center;'
-        + 'padding:0 7px;overflow:hidden;white-space:nowrap;box-sizing:border-box;'
-        + 'font-size:11px;font-weight:600;cursor:'+(canClick?'pointer':'default')+';';
-
-      // Team 1
-      divs += '<div'+dattr1+' style="'+baseStyle+'left:'+colX+'px;top:'+topY+'px;'
-        + 'background:'+bg1+';border:1px solid '+br1+';border-radius:4px 4px 0 0;'
-        + (w1?'font-weight:800;':'')+';color:'+fc1+'">'
-        + (s1&&m.t1?'<b style="font-size:9px;min-width:12px;opacity:.45;flex-shrink:0">'+s1+'</b>':'')
-        + '<span style="overflow:hidden;text-overflow:ellipsis">'+t1txt+(w1?' ✓':'')+'</span></div>';
-
-      // Score divider
-      divs += '<div style="position:absolute;left:'+colX+'px;top:'+(topY+TH)+'px;'
-        + 'width:'+RW+'px;height:'+DH+'px;background:var(--border)">'
-        + (m.score && done ? '<span style="position:absolute;right:4px;top:-8px;font-size:9px;color:var(--text3)">'+esc(m.score)+'</span>' : '')
-        + '</div>';
-
-      // Team 2
-      divs += '<div'+dattr2+' style="'+baseStyle+'left:'+colX+'px;top:'+(topY+TH+DH)+'px;'
-        + 'background:'+bg2+';border:1px solid '+br2+';border-radius:0 0 4px 4px;'
-        + (w2?'font-weight:800;':'')+';color:'+fc2+'">'
-        + (s2&&m.t2?'<b style="font-size:9px;min-width:12px;opacity:.45;flex-shrink:0">'+s2+'</b>':'')
-        + '<span style="overflow:hidden;text-overflow:ellipsis">'+t2txt+(w2?' ✓':'')+'</span></div>';
-
-      // Undo button (overlaid on connector area)
       if(done && !isBye && isAdmin && isCurr) {
-        divs += '<div data-undo="'+t.id+':'+ri+':'+mi+'" '
-          + 'style="position:absolute;left:'+(colX+RW+1)+'px;top:'+(cy-11)+'px;'
-          + 'width:16px;height:22px;display:flex;align-items:center;justify-content:center;'
-          + 'font-size:13px;color:var(--text3);cursor:pointer;z-index:5" title="취소">↩</div>';
+        divs += '<div data-undo="'+t.id+':'+ri+':'+mi+'" style="position:absolute;left:'+(colX+RW+1)+'px;top:'+(cy-11)+'px;width:16px;height:22px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text3);cursor:pointer;z-index:5">↩</div>';
       }
 
-      // SVG connector lines to next round
-      if(ri < nR - 1) {
-        var midX    = colX + RW + CW / 2;
-        var rightX  = colX + RW + CW;
-        var nextN   = rounds[ri + 1].length;
-        var nextSlotH = BH / nextN;
-        var nextMi  = Math.floor(mi / 2);
-        var nextCy  = LH + (nextMi + 0.5) * nextSlotH;
-
-        // Horizontal arm from this match to connector midpoint
-        svg += '<line x1="'+(colX+RW)+'" y1="'+cy+'" x2="'+midX+'" y2="'+cy+'"'
-          + ' stroke="var(--border)" stroke-width="1.5"/>';
-
-        if(mi % 2 === 0) {
-          // Even slot: draw vertical (to sibling) + horizontal to next round
-          var sibCy = LH + (mi + 1.5) * slotH;
-          svg += '<line x1="'+midX+'" y1="'+cy+'" x2="'+midX+'" y2="'+sibCy+'"'
-            + ' stroke="var(--border)" stroke-width="1.5"/>';
-          svg += '<line x1="'+midX+'" y1="'+nextCy+'" x2="'+rightX+'" y2="'+nextCy+'"'
-            + ' stroke="var(--border)" stroke-width="1.5"/>';
+      if(lri < nR-1) {
+        var midX   = colX+RW+CW/2, rightX = colX+RW+CW;
+        var nextN  = rounds[lri+1].length, nextSlotH = BH/nextN;
+        var nextMi = Math.floor(mi/2);
+        var nextCy = LH+(nextMi+0.5)*nextSlotH;
+        svg += '<line x1="'+(colX+RW)+'" y1="'+cy+'" x2="'+midX+'" y2="'+cy+'" stroke="var(--border)" stroke-width="1.5"/>';
+        if(mi%2===0) {
+          var sibCy = LH+(mi+1.5)*slotH;
+          svg += '<line x1="'+midX+'" y1="'+cy+'" x2="'+midX+'" y2="'+sibCy+'" stroke="var(--border)" stroke-width="1.5"/>';
+          svg += '<line x1="'+midX+'" y1="'+nextCy+'" x2="'+rightX+'" y2="'+nextCy+'" stroke="var(--border)" stroke-width="1.5"/>';
         }
       }
     });
   });
 
-  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:12px">'
-    + '<div style="position:relative;width:'+totalW+'px;height:'+totalH+'px">'
-    + divs
-    + '<svg style="position:absolute;top:0;left:0;width:'+totalW+'px;height:'+totalH+'px;'
-    + 'pointer-events:none;overflow:visible">' + svg + '</svg>'
-    + '</div></div>';
+  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">'
+    +'<div style="position:relative;width:'+totalW+'px;height:'+totalH+'px">'
+    +divs
+    +'<svg style="position:absolute;top:0;left:0;width:'+totalW+'px;height:'+totalH+'px;pointer-events:none;overflow:visible">'+svg+'</svg>'
+    +'</div></div>';
+}
+
+// ── 브래킷 뷰 (예선 분리 처리) ──
+function renderBracketView(t) {
+  var hasPrelim = t.directToR1 && t.directToR1.length > 0;
+  if(!hasPrelim) return renderBracketTree(t, t.rounds, 0);
+
+  var html = '';
+  // 예선 카드
+  var r0 = t.rounds[0];
+  var isCurrR0 = t.rounds.length === 1 && t.status === 'active';
+  html += '<div style="margin-bottom:12px">';
+  html += '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.05em;margin-bottom:7px">예선전</div>';
+  r0.forEach(function(m, mi) {
+    var w1=m.winner===1, w2=m.winner===2, done=m.winner!==null;
+    var canClick = isCurrR0 && !done && isAdmin;
+    var s1=getSeedNum(t,m.t1), s2=getSeedNum(t,m.t2);
+    html += '<div style="display:flex;align-items:stretch;gap:6px;margin-bottom:6px">';
+    var mk = function(side, team, w, s) {
+      var bg=w?'var(--accent-light)':'var(--surface2)', br=w?'var(--accent)':'var(--border)', fc=w?'var(--accent)':(done?'var(--text3)':'var(--text)');
+      return '<div '+(canClick?'data-win="'+t.id+':0:'+mi+':'+side+'"':'')+
+        ' style="flex:1;padding:10px 8px;background:'+bg+';border:1.5px solid '+br+';border-radius:var(--radius-sm);'
+        +'font-size:13px;font-weight:'+(w?'800':'600')+';color:'+fc+';cursor:'+(canClick?'pointer':'default')+';text-align:center">'
+        +(s?'<span style="font-size:10px;opacity:.6">'+s+'시드 </span>':'')
+        +esc(tLabel(team,t.type).replace(/<[^>]+>/g,''))+(w?' ✓':'')+'</div>';
+    };
+    html += mk(1, m.t1, w1, s1);
+    html += '<div style="display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--text3);min-width:28px">'+(m.score||'vs')+'</div>';
+    html += mk(2, m.t2, w2, s2);
+    if(done && isAdmin && isCurrR0) html += '<button data-undo="'+t.id+':0:'+mi+'" style="padding:4px 8px;border:none;background:none;color:var(--text3);font-size:12px;cursor:pointer;align-self:center">↩</button>';
+    html += '</div>';
+  });
+  if(t.rounds.length === 1) {
+    html += '<div style="text-align:center;padding:10px;font-size:12px;color:var(--text3)">예선 완료 후 본선 대진이 확정됩니다</div>';
+  }
+  html += '</div>';
+
+  // 본선 브래킷 (rounds[1]+)
+  if(t.rounds.length > 1) {
+    html += '<div style="font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.05em;margin-bottom:7px">본선</div>';
+    html += renderBracketTree(t, t.rounds.slice(1), 1);
+  }
+  return html;
 }
 
 // ── 렌더링 ──
