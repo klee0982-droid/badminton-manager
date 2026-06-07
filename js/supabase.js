@@ -49,7 +49,10 @@ async function loadFromSupabase() {
     if(mr.data&&mr.data.length) {
       members = mr.data.map(function(r){ return {id:Number(r.member_id),name:r.name,elo:Number(r.elo),gender:r.gender||'M'}; });
       nextMemberId = Math.max.apply(null,members.map(function(m){return m.id;}).concat([0]))+1;
-    } else { await syncMembers(); }
+    } else {
+      members = [];
+      nextMemberId = 1;
+    }
     var hr = await db.from('badminton_sessions').select('session_id,played_at,status,game_count,participant_count,payload').eq('club_id',CLUB_ID).order('played_at',{ascending:false}).limit(100);
     if(!hr.error&&hr.data) {
       gameHistory = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{},attendees:p.attendees||[]}; });

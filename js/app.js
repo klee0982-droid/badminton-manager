@@ -1,7 +1,7 @@
 // ── 글로벌 상태 ──
 var isAdmin = sessionStorage.getItem('bdm_admin_ok') === '1';
 var activeCourtCount = Number(localStorage.getItem('bdm_active_court_count') || 1);
-var members = loadJson(STORAGE_KEY, defaultMembers());
+var members = loadJson(STORAGE_KEY, []);
 var gameHistory = loadJson(HISTORY_KEY, []);
 var present = new Set();
 var courts = [null,null,null,null];
