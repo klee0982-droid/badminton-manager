@@ -58,10 +58,11 @@ function setActiveCourtCount(n) {
 
 // ── 탭 이동 ──
 function gotoTab(tab) {
-  ['attend','live','play','result','members','player','data'].forEach(function(id){ byId('tab-'+id).classList.toggle('active',id===tab); });
+  ['attend','live','play','result','members','player','tourney','data'].forEach(function(id){ byId('tab-'+id).classList.toggle('active',id===tab); });
   document.querySelectorAll('.tab').forEach(function(btn){ btn.classList.toggle('active',btn.getAttribute('data-tab')===tab); });
   if(tab==='data') renderData();
   if(tab==='player') renderPlayerSearch();
+  if(tab==='tourney') renderTourneySection();
   if(tab==='live') startLivePolling(); else stopLivePolling();
 }
 

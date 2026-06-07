@@ -464,4 +464,4 @@ function bind() {
 
 // ── 초기화 ──
 bind();
-renderAdmin(); renderCourtConfig(); renderAttend(); renderManage(); renderPlayerSearch(); renderTierGuide(); renderData(); runTests(); loadFromSupabase();
+renderAdmin(); renderCourtConfig(); renderAttend(); renderManage(); renderPlayerSearch(); renderTierGuide(); renderData(); renderTourneySection(); runTests(); loadFromSupabase();
