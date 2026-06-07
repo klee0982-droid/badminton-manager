@@ -1597,6 +1597,182 @@
         '<div class="game-note">A '+(g.deltaA>=0?'+':'')+g.deltaA+' · B '+(g.deltaB>=0?'+':'')+g.deltaB+'</div></div>';
       }).join('');
     }
+    function renderSessionStats() {
+  if(!gameLog.length) return;
+
+  // ── MVP: 승리 기여 + ELO 상승 종합 ──
+  var mvpScores = {};
+  gameLog.forEach(function(g) {
+    var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
+    var winners = won==='A' ? g.teamA : won==='B' ? g.teamB : [];
+    winners.forEach(function(p) {
+      mvpScores[p.id] = (mvpScores[p.id]||0) + 1;
+    });
+  });
+  Object.keys(eloDeltas).forEach(function(id) {
+    if(eloDeltas[id]>0) mvpScores[id] = (mvpScores[id]||0) + eloDeltas[id]*0.1;
+  });
+  var mvpId = Object.keys(mvpScores).sort(function(a,b){return mvpScores[b]-mvpScores[a];})[0];
+  var mvp = mvpId ? members.find(function(m){return m.id===Number(mvpId);}) : null;
+
+  // ── 최다 연승 ──
+  var streaks = {}, maxStreak = {}, curStreak = {};
+  gameLog.forEach(function(g) {
+    var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
+    var allPlayers = g.teamA.concat(g.teamB);
+    allPlayers.forEach(function(p) {
+      if(!curStreak[p.id]) curStreak[p.id]=0;
+      var inWin = won==='A' ? g.teamA.some(function(x){return x.id===p.id;}) : won==='B' ? g.teamB.some(function(x){return x.id===p.id;}) : false;
+      if(inWin) {
+        curStreak[p.id]++;
+        if(!maxStreak[p.id]||curStreak[p.id]>maxStreak[p.id]) maxStreak[p.id]=curStreak[p.id];
+      } else {
+        curStreak[p.id]=0;
+      }
+    });
+  });
+  var streakId = Object.keys(maxStreak).sort(function(a,b){return maxStreak[b]-maxStreak[a];})[0];
+  var streakPlayer = streakId ? members.find(function(m){return m.id===Number(streakId);}) : null;
+  var streakVal = streakId ? maxStreak[streakId] : 0;
+
+  // ── 박빙 경기 ──
+  var closest = gameLog.slice().sort(function(a,b){
+    return Math.abs(a.scoreA-a.scoreB) - Math.abs(b.scoreA-b.scoreB);
+  })[0];
+
+  // ── 역전왕: 예상 승률 낮았는데 이긴 횟수 ──
+  var upsets = {};
+  gameLog.forEach(function(g) {
+    var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
+    var isUpset = (won==='A' && g.expectedA<0.45) || (won==='B' && g.expectedA>0.55);
+    if(isUpset) {
+      var winners = won==='A' ? g.teamA : g.teamB;
+      winners.forEach(function(p){ upsets[p.id]=(upsets[p.id]||0)+1; });
+    }
+  });
+  var upsetId = Object.keys(upsets).sort(function(a,b){return upsets[b]-upsets[a];})[0];
+  var upsetPlayer = upsetId ? members.find(function(m){return m.id===Number(upsetId);}) : null;
+  var upsetVal = upsetId ? upsets[upsetId] : 0;
+
+  // ── 체력왕: 가장 많이 뛰면서 승률 높은 사람 ──
+  var stamina = {};
+  gameLog.forEach(function(g) {
+    var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
+    g.teamA.concat(g.teamB).forEach(function(p) {
+      if(!stamina[p.id]) stamina[p.id]={played:0,wins:0};
+      stamina[p.id].played++;
+      var inWin = won==='A' ? g.teamA.some(function(x){return x.id===p.id;}) : won==='B' ? g.teamB.some(function(x){return x.id===p.id;}) : false;
+      if(inWin) stamina[p.id].wins++;
+    });
+  });
+  var staminaId = Object.keys(stamina)
+    .filter(function(id){ return stamina[id].played >= 3; })
+    .sort(function(a,b){
+      var rateA = stamina[a].wins/stamina[a].played, rateB = stamina[b].wins/stamina[b].played;
+      var diff = rateB - rateA;
+      return diff !== 0 ? diff : stamina[b].played - stamina[a].played;
+    })[0];
+  var staminaPlayer = staminaId ? members.find(function(m){return m.id===Number(staminaId);}) : null;
+  var staminaData = staminaId ? stamina[staminaId] : null;
+
+  // ── 렌더링 ──
+  var html = '<div class="card" style="margin-top:12px">' +
+    '<div class="card-title">오늘의 하이라이트</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">';
+
+  if(mvp) html +=
+    '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--accent-light);border-radius:var(--radius-sm)">'+
+    '<span style="font-size:22px">🏆</span>'+
+    '<div><div style="font-size:13px;font-weight:800">MVP · '+esc(mvp.name)+'</div>'+
+    '<div style="font-size:11px;color:var(--text2);font-weight:500">승리 기여 + ELO 상승 종합</div></div></div>';
+
+  if(streakPlayer && streakVal >= 2) html +=
+    '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--warn-light);border-radius:var(--radius-sm)">'+
+    '<span style="font-size:22px">🔥</span>'+
+    '<div><div style="font-size:13px;font-weight:800">'+streakVal+'연승 · '+esc(streakPlayer.name)+'</div>'+
+    '<div style="font-size:11px;color:var(--text2);font-weight:500">오늘 최다 연속 승리</div></div></div>';
+
+  if(closest) {
+    var cWon = closest.scoreA>closest.scoreB?'A팀':closest.scoreB>closest.scoreA?'B팀':'무승부';
+    html +=
+    '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm)">'+
+    '<span style="font-size:22px">⚡</span>'+
+    '<div><div style="font-size:13px;font-weight:800">박빙 · '+closest.scoreA+':'+closest.scoreB+' ('+cWon+')</div>'+
+    '<div style="font-size:11px;color:var(--text2);font-weight:500">'+closest.teamA.map(function(p){return p.name;}).join('·')+' vs '+closest.teamB.map(function(p){return p.name;}).join('·')+'</div></div></div>';
+  }
+
+  if(upsetPlayer && upsetVal >= 1) html +=
+    '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--danger-light);border-radius:var(--radius-sm)">'+
+    '<span style="font-size:22px">💥</span>'+
+    '<div><div style="font-size:13px;font-weight:800">역전왕 · '+esc(upsetPlayer.name)+'</div>'+
+    '<div style="font-size:11px;color:var(--text2);font-weight:500">오늘 업셋 '+upsetVal+'회</div></div></div>';
+
+  if(staminaPlayer && staminaData) html +=
+    '<div style="display:flex;align-items:center;gap:10px;padding:10px;background:#eef4fb;border-radius:var(--radius-sm)">'+
+    '<span style="font-size:22px">💪</span>'+
+    '<div><div style="font-size:13px;font-weight:800">체력왕 · '+esc(staminaPlayer.name)+'</div>'+
+    '<div style="font-size:11px;color:var(--text2);font-weight:500">'+staminaData.played+'게임 · 승률 '+Math.round(staminaData.wins/staminaData.played*100)+'%</div></div></div>';
+
+  html += '</div></div>';
+// ── 징크스 매칭: 같이 뛸 때 vs 상대할 때 승률 ──
+  var partnerWins = {}, partnerGames = {}, oppWins = {}, oppGames = {};
+  gameLog.forEach(function(g) {
+    var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
+    // 파트너 조합
+    [g.teamA, g.teamB].forEach(function(team) {
+      var didWin = (won==='A' && team===g.teamA) || (won==='B' && team===g.teamB);
+      for(var i=0;i<team.length;i++) for(var j=i+1;j<team.length;j++) {
+        var k = pairKey(team[i].id, team[j].id);
+        partnerGames[k] = (partnerGames[k]||0)+1;
+        if(didWin) partnerWins[k] = (partnerWins[k]||0)+1;
+      }
+    });
+    // 상대 조합
+    g.teamA.forEach(function(a){ g.teamB.forEach(function(b){
+      var k = pairKey(a.id, b.id);
+      oppGames[k] = (oppGames[k]||0)+1;
+    });});
+  });
+  // 가장 높은 파트너 승률 조합 (최소 2게임)
+  var bestPartnerKey = Object.keys(partnerGames)
+    .filter(function(k){ return partnerGames[k]>=2; })
+    .sort(function(a,b){
+      return (partnerWins[b]||0)/partnerGames[b] - (partnerWins[a]||0)/partnerGames[a];
+    })[0];
+  var bestPartner = null;
+  if(bestPartnerKey) {
+    var ids = bestPartnerKey.split('-').map(Number);
+    var p1 = members.find(function(m){return m.id===ids[0];}),
+        p2 = members.find(function(m){return m.id===ids[1];});
+    if(p1&&p2) bestPartner = {
+      names: p1.name+'·'+p2.name,
+      rate: Math.round((partnerWins[bestPartnerKey]||0)/partnerGames[bestPartnerKey]*100),
+      games: partnerGames[bestPartnerKey]
+    };
+  }
+
+  // ── 코트별 승률 ──
+  var courtStats = {};
+  gameLog.forEach(function(g) {
+    if(!courtStats[g.courtName]) courtStats[g.courtName]={aWin:0,bWin:0,total:0};
+    courtStats[g.courtName].total++;
+    if(g.scoreA>g.scoreB) courtStats[g.courtName].aWin++;
+    else if(g.scoreB>g.scoreA) courtStats[g.courtName].bWin++;
+  });
+  
+  // 결과 탭에 삽입 (r-stats 바로 아래)
+  var existing = byId('session-stats-card');
+  if(existing) existing.outerHTML = '<div id="session-stats-card">'+html+'</div>';
+  else {
+    var statsEl = byId('r-stats');
+    if(statsEl) {
+      var wrap = document.createElement('div');
+      wrap.id = 'session-stats-card';
+      wrap.innerHTML = html;
+      statsEl.parentNode.insertBefore(wrap, statsEl.nextSibling);
+    }
+  }
+}
     function editGame(idx) {
       var g = gameLog[idx];
       if(!g) return;
