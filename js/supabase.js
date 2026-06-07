@@ -44,7 +44,10 @@ async function saveGameState() {
           updatedAt: new Date().toISOString()
         }
       : null;
-    await db.from('clubs').update({game_state: state}).eq('club_id', CLUB_ID);
+    await db.from('club_game_state').upsert(
+      {club_id: CLUB_ID, game_state: state, updated_at: new Date().toISOString()},
+      {onConflict: 'club_id'}
+    );
   } catch(e) { console.warn('saveGameState:', e?.message||String(e)); }
 }
 
@@ -62,7 +65,7 @@ function stopLivePolling() {
 }
 async function refreshLive() {
   try {
-    var res = await db.from('clubs').select('game_state').eq('club_id',CLUB_ID).maybeSingle();
+    var res = await db.from('club_game_state').select('game_state').eq('club_id',CLUB_ID).maybeSingle();
     if(res.data) { _lastLiveState = res.data.game_state; renderLiveView(_lastLiveState); }
   } catch(e) { console.warn('refreshLive:', e?.message||String(e)); }
 }
@@ -71,12 +74,12 @@ function startRealtimeLive() {
   if(_realtimeChannel) return;
   _realtimeChannel = db.channel('live-'+CLUB_ID)
     .on('postgres_changes', {
-      event: 'UPDATE',
+      event: '*',
       schema: 'public',
-      table: 'clubs',
+      table: 'club_game_state',
       filter: 'club_id=eq.'+CLUB_ID
     }, function(payload) {
-      _lastLiveState = payload.new.game_state;
+      _lastLiveState = (payload.new || {}).game_state || null;
       renderLiveView(_lastLiveState);
     })
     .subscribe();
@@ -86,7 +89,7 @@ async function loadFromSupabase() {
   setSyncBadge('동기화 중','warn');
   try {
     // 클럽 정보 먼저 로드 (PIN 포함)
-    var cr = await db.from('clubs').select('name,admin_pin,game_state').eq('club_id',CLUB_ID).maybeSingle();
+    var cr = await db.from('clubs').select('name,admin_pin').eq('club_id',CLUB_ID).maybeSingle();
     if(cr.error) throw cr.error;
     if(!cr.data) {
       setSyncBadge('오류','bad');
@@ -111,7 +114,9 @@ async function loadFromSupabase() {
     if(!hr.error&&hr.data) {
       gameHistory = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{},attendees:p.attendees||[]}; });
     }
-    _lastLiveState = cr.data.game_state; saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
+    var gr = await db.from('club_game_state').select('game_state').eq('club_id',CLUB_ID).maybeSingle();
+    _lastLiveState = gr.data ? gr.data.game_state : null;
+    saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;
   } catch(e) {
     console.warn('loadFromSupabase:',e?.message||String(e)); setSyncBadge('오류','bad');
