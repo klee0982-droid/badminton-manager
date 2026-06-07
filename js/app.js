@@ -1,6 +1,6 @@
 // ── 상태 변수 ──
 var members = loadJson(STORAGE_KEY, defaultMembers());
-var history = loadJson(HISTORY_KEY, []);
+var gameHistory = loadJson(HISTORY_KEY, []);
 var present = new Set();
 var courts = [null,null,null,null];
 var waitQueue = [], gameLog = [], eloDeltas = {}, sessionStats = {};
@@ -116,8 +116,8 @@ function saveSession(status) {
   if(!gameLog.length||currentSessionSaved)return;
   var participants=new Set(); gameLog.forEach(function(g){g.teamA.concat(g.teamB).forEach(function(p){participants.add(p.id);});});
   var attendees = members.filter(function(m){ return present.has(m.id); }).map(function(m){ return { id: m.id, name: m.name, elo: m.elo, gender: m.gender }; });
-  history.unshift({id:Date.now(),date:new Date().toISOString(),status:status,games:JSON.parse(JSON.stringify(gameLog)),deltas:Object.assign({},eloDeltas),participantCount:participants.size,gameCount:gameLog.length,attendees:attendees});
-  history=history.slice(0,100); currentSessionSaved=true; syncHistory(); renderData();
+  gameHistory.unshift({id:Date.now(),date:new Date().toISOString(),status:status,games:JSON.parse(JSON.stringify(gameLog)),deltas:Object.assign({},eloDeltas),participantCount:participants.size,gameCount:gameLog.length,attendees:attendees});
+  gameHistory=gameHistory.slice(0,100); currentSessionSaved=true; syncHistory(); renderData();
 }
 async function applyEloAndReset() {
   if(!requireAdmin())return;
@@ -183,20 +183,20 @@ async function delMember(id) {
 }
 
 // ── 데이터 내보내기/가져오기 ──
-function exportData() { byId('data-box').value=JSON.stringify({version:1,exportedAt:new Date().toISOString(),members:members,history:history},null,2); byId('data-msg').textContent='내보내기 완료.'; }
+function exportData() { byId('data-box').value=JSON.stringify({version:1,exportedAt:new Date().toISOString(),members:members,gameHistory:gameHistory},null,2); byId('data-msg').textContent='내보내기 완료.'; }
 function importData() {
   if(!requireAdmin())return;
-  try { var p=JSON.parse(byId('data-box').value); if(!p.members||!Array.isArray(p.members))throw new Error(); members=p.members; history=Array.isArray(p.history)?p.history:history; nextMemberId=Math.max.apply(null,members.map(function(m){return m.id;}).concat([0]))+1; renderAll(); syncMembers(); syncHistory(); byId('data-msg').textContent='가져오기 완료.'; }
+  try { var p=JSON.parse(byId('data-box').value); if(!p.members||!Array.isArray(p.members))throw new Error(); members=p.members; gameHistory=Array.isArray(p.gameHistory)?p.gameHistory:Array.isArray(p.history)?p.history:gameHistory; nextMemberId=Math.max.apply(null,members.map(function(m){return m.id;}).concat([0]))+1; renderAll(); syncMembers(); syncHistory(); byId('data-msg').textContent='가져오기 완료.'; }
   catch(e){byId('data-msg').textContent='가져오기 실패.';}
 }
 function copyData() { if(!byId('data-box').value)exportData(); byId('data-box').select(); document.execCommand('copy'); byId('data-msg').textContent='복사 완료.'; }
-function clearHistory() { if(!requireAdmin())return; history=[]; saveLocal(); renderData(); byId('data-msg').textContent='삭제 완료. Supabase는 Table Editor에서 직접 삭제하세요.'; }
+function clearHistory() { if(!requireAdmin())return; gameHistory=[]; saveLocal(); renderData(); byId('data-msg').textContent='삭제 완료. Supabase는 Table Editor에서 직접 삭제하세요.'; }
 function exportAttendance() { updateAttendanceBox(); var box = byId('attendance-box'); if(!box || !box.value) return; box.select(); document.execCommand('copy'); showMsg('출석 명단이 복사됐어요!', 'info'); }
-function shareLatest() { var text = buildShareText(history.slice(0,1)); byId('share-box').value = text; byId('share-box').select(); document.execCommand('copy'); showMsg('클립보드에 복사됐어요!', 'info'); }
+function shareLatest() { var text = buildShareText(gameHistory.slice(0,1)); byId('share-box').value = text; byId('share-box').select(); document.execCommand('copy'); showMsg('클립보드에 복사됐어요!', 'info'); }
 function shareAll() {
   var today = new Date().toDateString();
-  var todaySessions = history.filter(function(h){ return new Date(h.date).toDateString() === today; });
-  if(!todaySessions.length) todaySessions = history.slice(0,3);
+  var todaySessions = gameHistory.filter(function(h){ return new Date(h.date).toDateString() === today; });
+  if(!todaySessions.length) todaySessions = gameHistory.slice(0,3);
   var text = buildShareText(todaySessions); byId('share-box').value = text; byId('share-box').select(); document.execCommand('copy'); showMsg('클립보드에 복사됐어요!', 'info');
 }
 

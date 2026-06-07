@@ -20,7 +20,7 @@ async function syncMembers() {
 async function syncHistory() {
   saveLocal();
   try {
-    var rows = history.map(function(h){ return {club_id:CLUB_ID,session_id:h.id,played_at:h.date,status:h.status,game_count:h.gameCount,participant_count:h.participantCount,payload:{games:h.games||[],deltas:h.deltas||{},attendees:h.attendees||[]}}; });
+    var rows = gameHistory.map(function(h){ return {club_id:CLUB_ID,session_id:h.id,played_at:h.date,status:h.status,game_count:h.gameCount,participant_count:h.participantCount,payload:{games:h.games||[],deltas:h.deltas||{},attendees:h.attendees||[]}}; });
     if(!rows.length) return;
     var res = await db.from('badminton_sessions').upsert(rows,{onConflict:'club_id,session_id'});
     if(res.error) throw res.error;
@@ -39,7 +39,7 @@ async function loadFromSupabase() {
     } else { await syncMembers(); }
     var hr = await db.from('badminton_sessions').select('session_id,played_at,status,game_count,participant_count,payload').eq('club_id',CLUB_ID).order('played_at',{ascending:false}).limit(100);
     if(!hr.error&&hr.data) {
-      history = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{},attendees:p.attendees||[]}; });
+      gameHistory = hr.data.map(function(r){ var p=r.payload||{}; return {id:Number(r.session_id),date:r.played_at,status:r.status,gameCount:r.game_count,participantCount:r.participant_count,games:p.games||[],deltas:p.deltas||{},attendees:p.attendees||[]}; });
     }
     saveLocal(); renderAll(); setSyncBadge('연결됨','ok');
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;

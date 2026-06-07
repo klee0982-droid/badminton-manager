@@ -260,7 +260,7 @@ function renderPlayerSearch() {
 function selectPlayer(id) { selectedPlayerId=Number(id); renderPlayerHistory(); }
 function getPlayerMatches(memberId) {
   var rows=[];
-  history.slice().reverse().forEach(function(session){
+  gameHistory.slice().reverse().forEach(function(session){
     (session.games||[]).forEach(function(g){
       var inA=(g.teamA||[]).some(function(p){return Number(p.id)===Number(memberId);}),inB=(g.teamB||[]).some(function(p){return Number(p.id)===Number(memberId);});
       if(!inA&&!inB)return;
@@ -306,7 +306,7 @@ function renderData() {
   renderAttendanceSelect();
   renderSeasonStats();
   var list=byId('history-list'); if(!list)return;
-  list.innerHTML=history.length?history.map(function(h){
+  list.innerHTML=gameHistory.length?gameHistory.map(function(h){
     var d=new Date(h.date);
     var attendeeHtml = '';
     if(h.attendees && h.attendees.length) {
@@ -324,8 +324,8 @@ function renderData() {
 }
 function renderAttendanceSelect() {
   var sel = byId('attendance-session-select'); if(!sel) return;
-  if(!history.length) { sel.innerHTML='<option>세션 없음</option>'; return; }
-  sel.innerHTML = history.map(function(h, i) {
+  if(!gameHistory.length) { sel.innerHTML='<option>세션 없음</option>'; return; }
+  sel.innerHTML = gameHistory.map(function(h, i) {
     var d = new Date(h.date);
     return '<option value="'+i+'">'+d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+' · '+(h.attendees ? h.attendees.length : h.participantCount)+'명</option>';
   }).join('');
@@ -333,8 +333,8 @@ function renderAttendanceSelect() {
 }
 function updateAttendanceBox() {
   var sel = byId('attendance-session-select'), box = byId('attendance-box');
-  if(!sel || !box || !history.length) return;
-  var h = history[Number(sel.value) || 0]; if(!h) return;
+  if(!sel || !box || !gameHistory.length) return;
+  var h = gameHistory[Number(sel.value) || 0]; if(!h) return;
   var d = new Date(h.date), lines = ['📋 출석 명단', d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}), ''];
   var attendees = h.attendees || [];
   if(attendees.length) {

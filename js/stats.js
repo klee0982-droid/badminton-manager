@@ -215,7 +215,7 @@ function renderPlayerDetailStats(member, mx) {
 // ── 시즌 누적 통계 (데이터 탭) ──
 function renderSeasonStats() {
   var allGames = [], allDeltas = {};
-  history.forEach(function(h){
+  gameHistory.forEach(function(h){
     (h.games||[]).forEach(function(g){ allGames.push(g); });
     Object.keys(h.deltas||{}).forEach(function(id){ allDeltas[id] = (allDeltas[id]||0) + (h.deltas[id]||0); });
   });

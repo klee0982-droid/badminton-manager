@@ -18,15 +18,7 @@ var TIERS = [
 ];
 
 function defaultMembers() {
-  return [
-    {id:1,name:'김민수',elo:1650,gender:'M'},{id:2,name:'이지현',elo:1580,gender:'F'},
-    {id:3,name:'박준혁',elo:1420,gender:'M'},{id:4,name:'최수진',elo:1390,gender:'F'},
-    {id:5,name:'정태영',elo:1300,gender:'M'},{id:6,name:'한미래',elo:1180,gender:'F'},
-    {id:7,name:'윤성호',elo:1150,gender:'M'},{id:8,name:'강예린',elo:1100,gender:'F'},
-    {id:9,name:'임도현',elo:980,gender:'M'},{id:10,name:'서지우',elo:950,gender:'M'},
-    {id:11,name:'오현아',elo:900,gender:'F'},{id:12,name:'배찬호',elo:820,gender:'M'},
-    {id:13,name:'류찬영',elo:780,gender:'M'},{id:14,name:'신예지',elo:1050,gender:'F'}
-  ];
+  return [];
 }
 
 // ── 유틸 ──
@@ -43,5 +35,5 @@ function gBadge(gender, asBtn, id) {
   return '<span class="'+cls+'">'+lbl+'</span>';
 }
 function loadJson(k, fb) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch(e) { return fb; } }
-function saveLocal() { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(members)); localStorage.setItem(HISTORY_KEY,JSON.stringify(history)); } catch(e){} }
+function saveLocal() { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(members)); localStorage.setItem(HISTORY_KEY,JSON.stringify(gameHistory)); } catch(e){} }
 function pairKey(a,b) { return [a,b].sort(function(x,y){return x-y;}).join('-'); }
