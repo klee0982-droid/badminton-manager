@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/:club((?!js|css|fonts|favicon|_next|static|register|app\\.html|style\\.css).*)", "destination": "/app.html?club=:club" }
+  ]
+}
