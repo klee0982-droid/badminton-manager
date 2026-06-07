@@ -308,18 +308,60 @@ function renderData() {
   var list=byId('history-list'); if(!list)return;
   list.innerHTML=gameHistory.length?gameHistory.map(function(h){
     var d=new Date(h.date);
-    var attendeeHtml = '';
-    if(h.attendees && h.attendees.length) {
-      attendeeHtml = '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+h.attendees.map(function(a){
-        return '<span style="font-size:11px;padding:2px 7px;border-radius:999px;background:var(--surface2);color:var(--text2);font-weight:600">'+esc(a.name)+'</span>';
-      }).join('')+'</div>';
+
+    // 하이라이트 계산
+    var games=h.games||[], deltas=h.deltas||{};
+    var highlights=[];
+
+    // MVP
+    var mvpScores={};
+    games.forEach(function(g){
+      var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      (won==='A'?g.teamA:won==='B'?g.teamB:[]).forEach(function(p){mvpScores[p.id]=(mvpScores[p.id]||0)+1;});
+    });
+    Object.keys(deltas).forEach(function(id){if(deltas[id]>0)mvpScores[id]=(mvpScores[id]||0)+deltas[id]*0.1;});
+    var mvpId=Object.keys(mvpScores).sort(function(a,b){return mvpScores[b]-mvpScores[a];})[0];
+    var mvpName=mvpId?_findName(h,Number(mvpId)):null;
+    if(mvpName) highlights.push('🏆 '+mvpName);
+
+    // 최다 연승
+    var maxStreak={},curStreak={};
+    games.forEach(function(g){
+      var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      (g.teamA||[]).concat(g.teamB||[]).forEach(function(p){
+        if(!curStreak[p.id])curStreak[p.id]=0;
+        var inWin=won==='A'?(g.teamA||[]).some(function(x){return x.id===p.id;}):won==='B'?(g.teamB||[]).some(function(x){return x.id===p.id;}):false;
+        if(inWin){curStreak[p.id]++;if(!maxStreak[p.id]||curStreak[p.id]>maxStreak[p.id])maxStreak[p.id]=curStreak[p.id];}
+        else curStreak[p.id]=0;
+      });
+    });
+    var streakId=Object.keys(maxStreak).sort(function(a,b){return maxStreak[b]-maxStreak[a];})[0];
+    if(streakId&&maxStreak[streakId]>=2) highlights.push('🔥 '+maxStreak[streakId]+'연승 '+_findName(h,Number(streakId)));
+
+    // ELO 1위
+    var topDelta=Object.keys(deltas).sort(function(a,b){return deltas[b]-deltas[a];})[0];
+    if(topDelta&&deltas[topDelta]>0) highlights.push('📈 +'+deltas[topDelta]+' '+(_findName(h,Number(topDelta))||''));
+
+    // 출석 명단
+    var attendeeHtml='';
+    if(h.attendees&&h.attendees.length){
+      attendeeHtml='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">'+
+        h.attendees.map(function(a){
+          return '<span style="font-size:11px;padding:2px 7px;border-radius:999px;background:var(--surface2);color:var(--text2);font-weight:600">'+esc(a.name)+'</span>';
+        }).join('')+'</div>';
     }
+
+    var highlightHtml=highlights.length?'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+
+      highlights.map(function(t){
+        return '<span style="font-size:11px;padding:3px 8px;border-radius:999px;background:var(--accent-light);color:var(--accent);font-weight:700">'+esc(t)+'</span>';
+      }).join('')+'</div>':'';
+
     return '<div class="hist-row" style="flex-direction:column;align-items:flex-start;gap:4px">'+
       '<div style="display:flex;justify-content:space-between;width:100%;align-items:center">'+
       '<div style="font-size:13px;font-weight:700">'+d.toLocaleDateString('ko-KR')+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})+'</div>'+
       '<div style="font-size:11px;color:var(--text3);font-weight:500">'+esc(h.status||'저장')+' · '+h.gameCount+'게임</div></div>'+
       '<div style="font-size:11px;color:var(--text3);font-weight:500">출석 '+(h.attendees?h.attendees.length:h.participantCount)+'명</div>'+
-      attendeeHtml+'</div>';
+      highlightHtml+attendeeHtml+'</div>';
   }).join(''):'<div class="empty">세션 기록 없음</div>';
 }
 function renderAttendanceSelect() {
