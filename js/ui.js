@@ -347,162 +347,6 @@ function updateAttendanceBox() {
   } else { lines.push('출석 데이터 없음 (이전 세션)'); }
   box.value = lines.join('\n');
 }
-function buildShareText(sessionList) {
-function buildShareText(sessionList) {
-  if(!sessionList.length) return '공유할 세션 기록이 없습니다.';
-  var lines = [];
-
-  sessionList.forEach(function(h) {
-    var d = new Date(h.date);
-    var dateStr = d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+
-      d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-
-    lines.push('🏸 '+dateStr+' 배드민턴 결과');
-    lines.push('총 '+h.gameCount+'게임 · '+h.participantCount+'명 참여');
-    lines.push('');
-
-    // ── 하이라이트 계산 ──
-    var games = h.games || [];
-    var deltas = h.deltas || {};
-
-    // MVP
-    var mvpScores = {};
-    games.forEach(function(g) {
-      var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
-      var winners = won==='A' ? g.teamA : won==='B' ? g.teamB : [];
-      winners.forEach(function(p){ mvpScores[p.id] = (mvpScores[p.id]||0) + 1; });
-    });
-    Object.keys(deltas).forEach(function(id) {
-      if(deltas[id]>0) mvpScores[id] = (mvpScores[id]||0) + deltas[id]*0.1;
-    });
-    var mvpId = Object.keys(mvpScores).sort(function(a,b){return mvpScores[b]-mvpScores[a];})[0];
-    var mvpName = mvpId ? _findName(h, Number(mvpId)) : null;
-
-    // 최다 연승
-    var maxStreak = {}, curStreak = {};
-    games.forEach(function(g) {
-      var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
-      (g.teamA||[]).concat(g.teamB||[]).forEach(function(p) {
-        if(!curStreak[p.id]) curStreak[p.id]=0;
-        var inWin = won==='A'?(g.teamA||[]).some(function(x){return x.id===p.id;}):won==='B'?(g.teamB||[]).some(function(x){return x.id===p.id;}):false;
-        if(inWin){ curStreak[p.id]++; if(!maxStreak[p.id]||curStreak[p.id]>maxStreak[p.id]) maxStreak[p.id]=curStreak[p.id]; }
-        else curStreak[p.id]=0;
-      });
-    });
-    var streakId = Object.keys(maxStreak).sort(function(a,b){return maxStreak[b]-maxStreak[a];})[0];
-    var streakName = streakId && maxStreak[streakId]>=2 ? _findName(h, Number(streakId)) : null;
-    var streakVal = streakId ? maxStreak[streakId] : 0;
-
-    // 박빙
-    var closest = games.slice().sort(function(a,b){ return Math.abs(a.scoreA-a.scoreB)-Math.abs(b.scoreA-b.scoreB); })[0];
-
-    // 역전왕
-    var upsets = {};
-    games.forEach(function(g) {
-      var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
-      if((won==='A'&&g.expectedA<0.45)||(won==='B'&&g.expectedA>0.55)) {
-        var winners = won==='A' ? g.teamA : g.teamB;
-        (winners||[]).forEach(function(p){ upsets[p.id]=(upsets[p.id]||0)+1; });
-      }
-    });
-    var upsetId = Object.keys(upsets).sort(function(a,b){return upsets[b]-upsets[a];})[0];
-    var upsetName = upsetId ? _findName(h, Number(upsetId)) : null;
-    var upsetVal = upsetId ? upsets[upsetId] : 0;
-
-    // 체력왕
-    var stamina = {};
-    games.forEach(function(g) {
-      var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
-      (g.teamA||[]).concat(g.teamB||[]).forEach(function(p) {
-        if(!stamina[p.id]) stamina[p.id]={name:p.name,played:0,wins:0};
-        stamina[p.id].played++;
-        var inWin = won==='A'?(g.teamA||[]).some(function(x){return x.id===p.id;}):won==='B'?(g.teamB||[]).some(function(x){return x.id===p.id;}):false;
-        if(inWin) stamina[p.id].wins++;
-      });
-    });
-    var staminaId = Object.keys(stamina)
-      .filter(function(id){ return stamina[id].played>=3; })
-      .sort(function(a,b){
-        var diff = stamina[b].wins/stamina[b].played - stamina[a].wins/stamina[a].played;
-        return diff!==0 ? diff : stamina[b].played-stamina[a].played;
-      })[0];
-
-    // 찰떡 파트너
-    var partnerWins={}, partnerGames={};
-    games.forEach(function(g) {
-      var won = g.scoreA > g.scoreB ? 'A' : g.scoreB > g.scoreA ? 'B' : null;
-      [g.teamA,g.teamB].forEach(function(team) {
-        var didWin=(won==='A'&&team===g.teamA)||(won==='B'&&team===g.teamB);
-        for(var i=0;i<(team||[]).length;i++) for(var j=i+1;j<(team||[]).length;j++) {
-          var k=[team[i].id,team[j].id].sort(function(a,b){return a-b;}).join('-');
-          partnerGames[k]=(partnerGames[k]||0)+1;
-          if(didWin) partnerWins[k]=(partnerWins[k]||0)+1;
-        }
-      });
-    });
-    var bestPKey = Object.keys(partnerGames)
-      .filter(function(k){return partnerGames[k]>=2;})
-      .sort(function(a,b){return (partnerWins[b]||0)/partnerGames[b]-(partnerWins[a]||0)/partnerGames[a];})[0];
-    var bestPartnerStr = null;
-    if(bestPKey) {
-      var pids=bestPKey.split('-').map(Number);
-      var pn1=_findName(h,pids[0]), pn2=_findName(h,pids[1]);
-      if(pn1&&pn2) bestPartnerStr=pn1+'·'+pn2+' (승률 '+Math.round((partnerWins[bestPKey]||0)/partnerGames[bestPKey]*100)+'%)';
-    }
-
-    // ── 하이라이트 출력 ──
-    if(mvpName||streakName||closest||upsetName||staminaId||bestPartnerStr) {
-      if(mvpName)          lines.push('🏆 MVP · '+mvpName);
-      if(streakName)       lines.push('🔥 '+streakVal+'연승 · '+streakName);
-      if(closest) {
-        var cWon = closest.scoreA>closest.scoreB?'A팀':closest.scoreB>closest.scoreA?'B팀':'무승부';
-        lines.push('⚡ 박빙 · '+closest.scoreA+':'+closest.scoreB+' ('+cWon+')');
-      }
-      if(upsetName&&upsetVal>=1) lines.push('💥 역전왕 · '+upsetName+' (업셋 '+upsetVal+'회)');
-      if(staminaId) {
-        var s=stamina[staminaId];
-        lines.push('💪 체력왕 · '+s.name+' ('+s.played+'게임 · 승률 '+Math.round(s.wins/s.played*100)+'%)');
-      }
-      if(bestPartnerStr)   lines.push('🤝 찰떡 파트너 · '+bestPartnerStr);
-      lines.push('');
-    }
-
-    // ── ELO 변동 ──
-    var ranked = Object.keys(deltas)
-      .map(function(id){ return {id:Number(id), delta:deltas[id]}; })
-      .filter(function(x){ return x.delta !== 0; })
-      .sort(function(a,b){ return b.delta - a.delta; });
-    if(ranked.length) {
-      lines.push('📊 ELO 변동');
-      ranked.slice(0,6).forEach(function(x, i) {
-        var name = _findName(h, x.id) || 'ID'+x.id;
-        var sign = x.delta > 0 ? '+' : '';
-        var medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ';
-        lines.push(medal+' '+name+' '+sign+x.delta);
-      });
-      lines.push('');
-    }
-
-    // ── 게임 기록 ──
-    if(games.length) {
-      lines.push('🎮 게임 기록');
-      games.forEach(function(g, i) {
-        var tA = (g.teamA||[]).map(function(p){return p.name;}).join('·');
-        var tB = (g.teamB||[]).map(function(p){return p.name;}).join('·');
-        var won = g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':'';
-        lines.push((i+1)+'. '+(won==='A'?'✅ ':'')+tA+' '+g.scoreA+':'+g.scoreB+' '+(won==='B'?'✅ ':'')+tB);
-      });
-    }
-
-    lines.push('');
-    lines.push('─────────────────');
-    lines.push('');
-  });
-
-  return lines.join('\n').trim();
-}
-
-// 세션 데이터에서 이름 찾기 (attendees 또는 게임 기록에서)
 function _findName(session, id) {
   if(session.attendees) {
     var a = session.attendees.find(function(x){ return Number(x.id)===id; });
@@ -514,21 +358,127 @@ function _findName(session, id) {
       if(Number(p.id)===id) found=p.name;
     });
   });
-  // members 전역 변수에서도 찾기
-  if(!found) {
-    var m = members.find(function(x){ return x.id===id; });
-    if(m) found = m.name;
-  }
+  if(!found) { var m=members.find(function(x){return x.id===id;}); if(m) found=m.name; }
   return found;
 }
+function buildShareText(sessionList) {
+  if(!sessionList.length) return '공유할 세션 기록이 없습니다.';
+  var lines = [];
+  sessionList.forEach(function(h) {
+    var d = new Date(h.date);
+    var dateStr = d.getFullYear()+'년 '+(d.getMonth()+1)+'월 '+d.getDate()+'일 '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+    lines.push('🏸 '+dateStr+' 배드민턴 결과');
+    lines.push('총 '+h.gameCount+'게임 · '+h.participantCount+'명 참여');
+    lines.push('');
+    var games = h.games || [], deltas = h.deltas || {};
+
+    // MVP
+    var mvpScores = {};
+    games.forEach(function(g) {
+      var won = g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      (won==='A'?g.teamA:won==='B'?g.teamB:[]).forEach(function(p){ mvpScores[p.id]=(mvpScores[p.id]||0)+1; });
+    });
+    Object.keys(deltas).forEach(function(id){ if(deltas[id]>0) mvpScores[id]=(mvpScores[id]||0)+deltas[id]*0.1; });
+    var mvpId=Object.keys(mvpScores).sort(function(a,b){return mvpScores[b]-mvpScores[a];})[0];
+    var mvpName=mvpId?_findName(h,Number(mvpId)):null;
+
+    // 최다 연승
+    var maxStreak={}, curStreak={};
+    games.forEach(function(g) {
+      var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      (g.teamA||[]).concat(g.teamB||[]).forEach(function(p) {
+        if(!curStreak[p.id]) curStreak[p.id]=0;
+        var inWin=won==='A'?(g.teamA||[]).some(function(x){return x.id===p.id;}):won==='B'?(g.teamB||[]).some(function(x){return x.id===p.id;}):false;
+        if(inWin){curStreak[p.id]++;if(!maxStreak[p.id]||curStreak[p.id]>maxStreak[p.id])maxStreak[p.id]=curStreak[p.id];}
+        else curStreak[p.id]=0;
+      });
+    });
+    var streakId=Object.keys(maxStreak).sort(function(a,b){return maxStreak[b]-maxStreak[a];})[0];
+    var streakName=streakId&&maxStreak[streakId]>=2?_findName(h,Number(streakId)):null;
+    var streakVal=streakId?maxStreak[streakId]:0;
+
+    // 박빙
+    var closest=games.slice().sort(function(a,b){return Math.abs(a.scoreA-a.scoreB)-Math.abs(b.scoreA-b.scoreB);})[0];
+
+    // 역전왕
+    var upsets={};
+    games.forEach(function(g) {
+      var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      if((won==='A'&&g.expectedA<0.45)||(won==='B'&&g.expectedA>0.55))
+        (won==='A'?g.teamA:g.teamB||[]).forEach(function(p){upsets[p.id]=(upsets[p.id]||0)+1;});
+    });
+    var upsetId=Object.keys(upsets).sort(function(a,b){return upsets[b]-upsets[a];})[0];
+    var upsetName=upsetId?_findName(h,Number(upsetId)):null;
+    var upsetVal=upsetId?upsets[upsetId]:0;
+
+    // 체력왕
+    var stamina={};
+    games.forEach(function(g) {
+      var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      (g.teamA||[]).concat(g.teamB||[]).forEach(function(p) {
+        if(!stamina[p.id]) stamina[p.id]={name:p.name,played:0,wins:0};
+        stamina[p.id].played++;
+        var inWin=won==='A'?(g.teamA||[]).some(function(x){return x.id===p.id;}):won==='B'?(g.teamB||[]).some(function(x){return x.id===p.id;}):false;
+        if(inWin) stamina[p.id].wins++;
+      });
+    });
+    var staminaId=Object.keys(stamina).filter(function(id){return stamina[id].played>=3;})
+      .sort(function(a,b){var d=stamina[b].wins/stamina[b].played-stamina[a].wins/stamina[a].played;return d!==0?d:stamina[b].played-stamina[a].played;})[0];
+
+    // 찰떡 파트너
+    var pWins={},pGames={};
+    games.forEach(function(g) {
+      var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':null;
+      [g.teamA,g.teamB].forEach(function(team){
+        var didWin=(won==='A'&&team===g.teamA)||(won==='B'&&team===g.teamB);
+        for(var i=0;i<(team||[]).length;i++) for(var j=i+1;j<(team||[]).length;j++){
+          var k=[team[i].id,team[j].id].sort(function(a,b){return a-b;}).join('-');
+          pGames[k]=(pGames[k]||0)+1; if(didWin) pWins[k]=(pWins[k]||0)+1;
+        }
+      });
+    });
+    var bestPKey=Object.keys(pGames).filter(function(k){return pGames[k]>=2;})
+      .sort(function(a,b){return (pWins[b]||0)/pGames[b]-(pWins[a]||0)/pGames[a];})[0];
+    var bestPartnerStr=null;
+    if(bestPKey){
+      var pids=bestPKey.split('-').map(Number);
+      var pn1=_findName(h,pids[0]),pn2=_findName(h,pids[1]);
+      if(pn1&&pn2) bestPartnerStr=pn1+'·'+pn2+' (승률 '+Math.round((pWins[bestPKey]||0)/pGames[bestPKey]*100)+'%)';
     }
-    if(h.games && h.games.length) {
+
+    // 하이라이트 출력
+    if(mvpName||streakName||closest||upsetName||staminaId||bestPartnerStr){
+      if(mvpName)          lines.push('🏆 MVP · '+mvpName);
+      if(streakName)       lines.push('🔥 '+streakVal+'연승 · '+streakName);
+      if(closest){
+        var cWon=closest.scoreA>closest.scoreB?'A팀':closest.scoreB>closest.scoreA?'B팀':'무승부';
+        lines.push('⚡ 박빙 · '+closest.scoreA+':'+closest.scoreB+' ('+cWon+')');
+      }
+      if(upsetName&&upsetVal>=1) lines.push('💥 역전왕 · '+upsetName+' (업셋 '+upsetVal+'회)');
+      if(staminaId){var s=stamina[staminaId];lines.push('💪 체력왕 · '+s.name+' ('+s.played+'게임 · 승률 '+Math.round(s.wins/s.played*100)+'%)');}
+      if(bestPartnerStr)   lines.push('🤝 찰떡 파트너 · '+bestPartnerStr);
+      lines.push('');
+    }
+
+    // ELO 변동
+    var ranked=Object.keys(deltas).map(function(id){return{id:Number(id),delta:deltas[id]};}).filter(function(x){return x.delta!==0;}).sort(function(a,b){return b.delta-a.delta;});
+    if(ranked.length){
+      lines.push('📊 ELO 변동');
+      ranked.slice(0,6).forEach(function(x,i){
+        var name=_findName(h,x.id)||'ID'+x.id;
+        lines.push((i===0?'🥇':i===1?'🥈':i===2?'🥉':'  ')+' '+name+' '+(x.delta>0?'+':'')+x.delta);
+      });
+      lines.push('');
+    }
+
+    // 게임 기록
+    if(games.length){
       lines.push('🎮 게임 기록');
-      h.games.forEach(function(g, i) {
-        var tA = (g.teamA||[]).map(function(p){return p.name;}).join('·');
-        var tB = (g.teamB||[]).map(function(p){return p.name;}).join('·');
-        var won = g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':'';
-        lines.push((i+1)+'. '+(won==='A'?'✅':'')+'['+tA+'] '+g.scoreA+':'+g.scoreB+' ['+(won==='B'?'✅':'')+tB+']');
+      games.forEach(function(g,i){
+        var tA=(g.teamA||[]).map(function(p){return p.name;}).join('·');
+        var tB=(g.teamB||[]).map(function(p){return p.name;}).join('·');
+        var won=g.scoreA>g.scoreB?'A':g.scoreB>g.scoreA?'B':'';
+        lines.push((i+1)+'. '+(won==='A'?'✅ ':'')+tA+' '+g.scoreA+':'+g.scoreB+' '+(won==='B'?'✅ ':'')+tB);
       });
     }
     lines.push(''); lines.push('─────────────────'); lines.push('');

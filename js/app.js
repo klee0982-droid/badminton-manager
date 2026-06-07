@@ -302,8 +302,8 @@ function bind() {
 }
 
 // ── 초기화 ──
+bind();
+
 window.gotoTab = gotoTab;
 window.closeSwapPopup = closeSwapPopup;
-
-bind();
 renderAdmin(); renderCourtConfig(); renderAttend(); renderManage(); renderPlayerSearch(); renderTierGuide(); renderData(); runTests(); loadFromSupabase();
