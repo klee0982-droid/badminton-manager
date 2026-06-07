@@ -138,16 +138,35 @@
     var hintEl  = document.getElementById('club-id-hint');
     var regBtn  = document.getElementById('register-btn');
 
+    // 한글 → 로마자 변환
+    var CHO  = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+    var JUNG = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+    var JONG = ['','g','kk','gs','n','nj','nh','d','l','lg','lm','lb','ls','lt','lp','lh','m','b','bs','s','ss','ng','j','ch','k','t','p','h'];
+    function romanize(str) {
+      return str.split('').map(function(c) {
+        var code = c.charCodeAt(0);
+        if (code >= 0xAC00 && code <= 0xD7A3) {
+          var n = code - 0xAC00;
+          return CHO[Math.floor(n / 588)] + JUNG[Math.floor((n % 588) / 28)] + JONG[n % 28];
+        }
+        return c;
+      }).join('');
+    }
+    function toSlug(name) {
+      return romanize(name)
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 30);
+    }
+
     // 이름 → club_id 자동 생성
     nameEl.addEventListener('input', function() {
       var name = nameEl.value.trim();
       if(!name) { idEl.value=''; hintEl.textContent='동호회 이름을 입력하면 자동으로 생성돼요'; hintEl.className='form-hint'; validate(); return; }
-      var auto = name
-        .toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^a-z0-9가-힣-]/g, '')
-        .slice(0, 30);
-      if(!idEl.dataset.edited) idEl.value = auto;
+      if(!idEl.dataset.edited) idEl.value = toSlug(name);
       checkId(idEl.value);
       validate();
     });
