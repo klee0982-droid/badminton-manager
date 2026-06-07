@@ -1571,6 +1571,7 @@
       var today=new Date();
       byId('r-date').textContent=today.getFullYear()+'년 '+(today.getMonth()+1)+'월 '+today.getDate()+'일';
       byId('r-sub').textContent='총 '+gameLog.length+'게임';
+      renderSessionStats();
       var participants=new Set(); gameLog.forEach(function(g){g.teamA.concat(g.teamB).forEach(function(p){participants.add(p.id);});});
       var counts=Array.from(participants).map(function(id){return statOf(id).played;}),minG=counts.length?Math.min.apply(null,counts):0,maxG=counts.length?Math.max.apply(null,counts):0;
       byId('r-stats').innerHTML='<div class="rstat"><div class="n">'+gameLog.length+'</div><div class="l">게임</div></div><div class="rstat"><div class="n">'+participants.size+'</div><div class="l">참여</div></div><div class="rstat"><div class="n">'+minG+'~'+maxG+'</div><div class="l">개인 게임수</div></div>';
