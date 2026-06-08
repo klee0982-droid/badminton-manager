@@ -125,7 +125,6 @@ function courtFinished(i) {
   recordPairings(c.teamA, c.teamB);
   waitQueue.push.apply(waitQueue,played);
   courts[i]=null;
-  assignNext(i);
   updateCourtCard(i); updateWaitSection(); renderAttend(); saveGameState();
 }
 function finishDay() {
