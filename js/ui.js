@@ -127,49 +127,65 @@ function renderLiveView(state) {
   var el = byId('live-courts'); if(!el) return;
   var updEl = byId('live-updated');
   if(!state || (!state.courts.some(function(c){return c;}) && !state.waitQueue.length)) {
-    el.innerHTML = '<div style="text-align:center;padding:48px 16px;color:var(--text3);font-size:14px;font-weight:500">⏸ 현재 진행 중인 게임이 없어요</div>';
+    el.innerHTML = '<div style="text-align:center;padding:64px 16px;color:var(--text3);font-size:15px;font-weight:500">⏸ 현재 진행 중인 게임이 없어요</div>';
     if(updEl) updEl.textContent = '';
     return;
   }
   var term = (byId('live-search')||{value:''}).value.trim().toLowerCase();
-  function hi(name) {
-    var matched = term && name.toLowerCase().indexOf(term) >= 0;
-    return matched
-      ? '<span style="background:var(--accent);color:#fff;padding:2px 8px;border-radius:20px;font-weight:700">'+esc(name)+' 👈</span>'
-      : '<span style="padding:2px 8px">'+esc(name)+'</span>';
-  }
-  var html = '';
+  var COURT_COLORS = ['#2d7a3a','#185fa5','#993c1d','#6d4bb5'];
   var COURT_NAMES = ['1코트','2코트','3코트','4코트'];
+
+  function playerRow(p) {
+    var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
+    return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);last-child:border:none">' +
+      '<span style="font-size:22px;font-weight:800;letter-spacing:-0.03em;'+(matched?'color:var(--accent)':'')+'">' + esc(p.name) + (matched?' 👈':'') + '</span>' +
+    '</div>';
+  }
+
+  var html = '';
   state.courts.forEach(function(c, i) {
     if(!c) return;
-    html += '<div class="card" style="margin-bottom:12px">' +
-      '<div style="font-size:13px;font-weight:800;color:var(--accent);margin-bottom:10px">🏸 '+COURT_NAMES[i]+'</div>' +
-      '<div style="display:flex;gap:8px;align-items:center">' +
-        '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px 12px">' +
-          '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">A팀</div>' +
-          '<div style="font-size:14px;font-weight:600;line-height:1.8">'+c.teamA.map(function(p){return hi(p.name);}).join('<br>')+'</div>' +
+    var color = COURT_COLORS[i];
+    html +=
+      '<div style="background:var(--surface);border-radius:var(--radius-lg);border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px">' +
+        '<div style="background:'+color+';padding:12px 16px;display:flex;align-items:center;gap:8px">' +
+          '<span style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.01em">🏸 '+COURT_NAMES[i]+'</span>' +
         '</div>' +
-        '<div style="font-size:18px;font-weight:800;color:var(--text3)">vs</div>' +
-        '<div style="flex:1;background:var(--surface2);border-radius:8px;padding:10px 12px">' +
-          '<div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:6px">B팀</div>' +
-          '<div style="font-size:14px;font-weight:600;line-height:1.8">'+c.teamB.map(function(p){return hi(p.name);}).join('<br>')+'</div>' +
+        '<div style="display:grid;grid-template-columns:1fr auto 1fr">' +
+          '<div style="padding:14px 16px">' +
+            '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:0.05em;margin-bottom:8px">A팀</div>' +
+            c.teamA.map(playerRow).join('') +
+          '</div>' +
+          '<div style="display:flex;align-items:center;justify-content:center;padding:0 8px;color:var(--text3);font-size:20px;font-weight:800">vs</div>' +
+          '<div style="padding:14px 16px;border-left:1px solid var(--border)">' +
+            '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:0.05em;margin-bottom:8px">B팀</div>' +
+            c.teamB.map(playerRow).join('') +
+          '</div>' +
         '</div>' +
-      '</div>' +
-    '</div>';
+      '</div>';
   });
+
   if(state.waitQueue && state.waitQueue.length) {
-    html += '<div class="card">' +
-      '<div style="font-size:13px;font-weight:800;color:var(--text2);margin-bottom:10px">⏳ 대기 중 ('+state.waitQueue.length+'명)</div>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
-        state.waitQueue.map(function(p, idx){
-          var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
-          return '<span style="'+(matched?'background:var(--accent);color:#fff;':'background:var(--surface2);color:var(--text);')+'padding:5px 12px;border-radius:20px;font-size:13px;font-weight:600">'+(idx+1)+'. '+esc(p.name)+(matched?' 👈':'')+'</span>';
-        }).join('') +
-      '</div>' +
-    '</div>';
+    html +=
+      '<div style="background:var(--surface);border-radius:var(--radius-lg);border:1.5px solid var(--border);overflow:hidden">' +
+        '<div style="background:var(--surface2);padding:12px 16px;border-bottom:1px solid var(--border)">' +
+          '<span style="font-size:14px;font-weight:800;color:var(--text2)">⏳ 대기 중</span>' +
+          '<span style="font-size:12px;font-weight:600;color:var(--text3);margin-left:6px">'+state.waitQueue.length+'명</span>' +
+        '</div>' +
+        '<div style="padding:10px 16px">' +
+          state.waitQueue.map(function(p, idx) {
+            var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
+            return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">' +
+              '<span style="font-size:13px;font-weight:700;color:var(--text3);min-width:20px">'+(idx+1)+'</span>' +
+              '<span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;'+(matched?'color:var(--accent)':'')+'">' + esc(p.name) + (matched?' 👈':'') + '</span>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
   }
+
   el.innerHTML = html;
-  if(updEl) {
+  if(updEl && state.updatedAt) {
     var d = new Date(state.updatedAt);
     updEl.textContent = '마지막 업데이트: '+d.getHours()+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0');
   }
