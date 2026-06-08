@@ -18,6 +18,9 @@ function renderAdmin() {
   }
   var nw = byId('notice-admin-wrap');
   if(nw) nw.style.display = isAdmin ? '' : 'none';
+  var gf = byId('guest-show-btn');
+  if(gf) gf.style.display = isAdmin ? '' : 'none';
+  renderGenderBalanceBtn();
   renderNotices();
 }
 function requireAdmin() {
@@ -90,6 +93,7 @@ function renderAttend() {
   byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
     var on=present.has(m.id), early=leftEarly.has(m.id);
     if(early) return '<button type="button" class="chip left-early" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">조기 퇴장 (출석 인정)</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
+    if(m.isGuest) return '<button type="button" class="chip guest'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r"><span class="guest-badge">게스트</span></span></button>';
     return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
   }).join(''):'<div class="empty">검색 결과 없음</div>';
   var n=present.size,c=Math.min(activeCourtCount,Math.floor(n/4));

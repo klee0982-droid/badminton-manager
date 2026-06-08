@@ -55,6 +55,9 @@ button, input, textarea, select { font-family: inherit; }
 .chip.present { background: var(--accent-light); border-color: var(--accent-mid); }
 .chip.left-early { background: #f5f0ff; border-color: #c4b5fd; opacity: .8; }
 .chip.left-early .ctap { color: #7c4dff; font-weight: 600; }
+.chip.guest { border-style: dashed; border-color: #f59e0b; }
+.chip.guest.present { background: #fffbeb; border-color: #f59e0b; }
+.guest-badge { font-size: 10px; padding: 2px 7px; border-radius: 5px; background: #fef3c7; color: #92400e; font-weight: 800; }
 .cname { font-size: 14px; font-weight: 700; }
 .ctap { font-size: 10px; color: var(--text3); margin-top: 2px; font-weight: 500; }
 .chip.present .ctap { color: var(--accent); font-weight: 700; }

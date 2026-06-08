@@ -10,7 +10,7 @@ function setSyncBadge(text, type) {
 async function syncMembers() {
   saveLocal();
   try {
-    var rows = members.map(function(m){ return {club_id:CLUB_ID,member_id:m.id,name:m.name,elo:m.elo,gender:m.gender||'M',updated_at:new Date().toISOString()}; });
+    var rows = members.filter(function(m){ return !m.isGuest; }).map(function(m){ return {club_id:CLUB_ID,member_id:m.id,name:m.name,elo:m.elo,gender:m.gender||'M',updated_at:new Date().toISOString()}; });
     var res = await db.from('badminton_members').upsert(rows,{onConflict:'club_id,member_id'});
     if(res.error) throw res.error;
     setSyncBadge('저장됨','ok');

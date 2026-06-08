@@ -10,6 +10,8 @@ var turn = 0;
 var pausedIds = [];
 var leftEarly = new Set();
 var notices = [];
+var genderBalanceEnabled = localStorage.getItem('bdm_gender_balance') !== '0';
+var _guestGender = 'M';
 var currentSessionSaved = false, selectedPlayerId = null;
 var nextMemberId = Math.max.apply(null, members.map(function(m){return m.id;}).concat([0])) + 1;
 var selectedForDelete = new Set();
@@ -90,6 +92,7 @@ function resetAll() {
   if(!requireAdmin())return;
   present.clear(); courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
   leftEarly.clear();
+  members = members.filter(function(m){ return !m.isGuest; });
   _tStep=0; _td={}; _tView=tourneys.length?tourneys[tourneys.length-1].id:null;
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
@@ -170,10 +173,42 @@ function saveSession(status) {
 async function applyEloAndReset() {
   if(!requireAdmin())return;
   saveSession('ELO 반영');
-  members.forEach(function(m){if(eloDeltas[m.id])m.elo=Math.max(100,Math.min(3000,m.elo+eloDeltas[m.id]));});
+  members.forEach(function(m){if(!m.isGuest && eloDeltas[m.id])m.elo=Math.max(100,Math.min(3000,m.elo+eloDeltas[m.id]));});
   await syncMembers(); resetAll(); gotoTab('attend'); showMsg('ELO 반영 완료!','info');
 }
 function discardAndReset() { if(!requireAdmin())return; saveSession('기록만 저장'); resetAll(); gotoTab('attend'); }
+
+// ── 게스트 ──
+function addGuest() {
+  if(!requireAdmin()) return;
+  var nameEl = byId('guest-name');
+  var baseName = (nameEl && nameEl.value.trim()) || '게스트';
+  var finalName = baseName;
+  var suffix = 2;
+  while(members.some(function(m){ return norm(m.name)===norm(finalName); })) {
+    finalName = baseName + suffix++;
+  }
+  var newId = nextMemberId++;
+  members.push({id:newId, name:finalName, elo:1000, gender:_guestGender, isGuest:true});
+  present.add(newId);
+  if(nameEl) nameEl.value='';
+  byId('guest-form').style.display='none';
+  renderAttend(); renderManage();
+  showMsg('"'+finalName+'" 게스트 추가!','info');
+}
+function toggleGenderBalance() {
+  genderBalanceEnabled = !genderBalanceEnabled;
+  localStorage.setItem('bdm_gender_balance', genderBalanceEnabled?'1':'0');
+  renderGenderBalanceBtn();
+  showMsg('성별 균형 배정 '+(genderBalanceEnabled?'ON':'OFF'),'info');
+}
+function renderGenderBalanceBtn() {
+  var btn = byId('gender-balance-btn'); if(!btn) return;
+  btn.textContent = '성별 균형 ' + (genderBalanceEnabled ? 'ON' : 'OFF');
+  btn.style.background = genderBalanceEnabled ? 'var(--accent)' : 'var(--surface)';
+  btn.style.color = genderBalanceEnabled ? '#fff' : 'var(--text2)';
+  btn.style.borderColor = genderBalanceEnabled ? 'var(--accent)' : 'var(--border)';
+}
 
 // ── 멤버 관리 ──
 async function addMember() {
@@ -414,6 +449,21 @@ function bind() {
   });
   byId('court-dec').addEventListener('click',function(){setActiveCourtCount(activeCourtCount-1);});
   byId('court-inc').addEventListener('click',function(){setActiveCourtCount(activeCourtCount+1);});
+  byId('gender-balance-btn').addEventListener('click',toggleGenderBalance);
+  byId('guest-show-btn').addEventListener('click',function(){byId('guest-form').style.display='';byId('guest-name').focus();});
+  byId('guest-cancel-btn').addEventListener('click',function(){byId('guest-form').style.display='none';});
+  byId('guest-add-btn').addEventListener('click',addGuest);
+  byId('guest-name').addEventListener('keydown',function(e){if(e.key==='Enter')addGuest();});
+  byId('guest-m-btn').addEventListener('click',function(){
+    _guestGender='M';
+    byId('guest-m-btn').style.cssText='padding:8px 14px;background:var(--accent);color:#fff;border-color:var(--accent)';
+    byId('guest-f-btn').style.cssText='padding:8px 14px';
+  });
+  byId('guest-f-btn').addEventListener('click',function(){
+    _guestGender='F';
+    byId('guest-f-btn').style.cssText='padding:8px 14px;background:var(--accent);color:#fff;border-color:var(--accent)';
+    byId('guest-m-btn').style.cssText='padding:8px 14px';
+  });
   byId('notice-add-btn').addEventListener('click',function(){
     if(!requireAdmin())return;
     var inp=byId('notice-input'); var txt=inp.value.trim();
@@ -480,4 +530,4 @@ function bind() {
 
 // ── 초기화 ──
 bind();
-renderAdmin(); renderCourtConfig(); renderAttend(); renderManage(); renderPlayerSearch(); renderTierGuide(); renderData(); renderTourneySection(); runTests(); loadFromSupabase();
+renderAdmin(); renderCourtConfig(); renderGenderBalanceBtn(); renderAttend(); renderManage(); renderPlayerSearch(); renderTierGuide(); renderData(); renderTourneySection(); runTests(); loadFromSupabase();

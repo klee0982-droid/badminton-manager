@@ -128,12 +128,28 @@
         <div class="stat-box"><div class="stat-n" id="s-games">0</div><div class="stat-l">완료</div></div>
       </div>
       <div id="attend-alert" style="display:none" class="alert"></div>
-      <div class="config-block">
-        <div class="config-label">코트 수</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <button id="court-dec" class="btn" style="padding:8px 16px;font-size:18px;font-weight:700;line-height:1">−</button>
-          <span id="court-config-hint" style="font-size:16px;font-weight:800;min-width:52px;text-align:center;color:var(--text)">1코트</span>
-          <button id="court-inc" class="btn" style="padding:8px 16px;font-size:18px;font-weight:700;line-height:1">+</button>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="config-block" style="margin-bottom:0">
+          <div class="config-label">코트 수</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <button id="court-dec" class="btn" style="padding:8px 16px;font-size:18px;font-weight:700;line-height:1">−</button>
+            <span id="court-config-hint" style="font-size:16px;font-weight:800;min-width:52px;text-align:center;color:var(--text)">1코트</span>
+            <button id="court-inc" class="btn" style="padding:8px 16px;font-size:18px;font-weight:700;line-height:1">+</button>
+          </div>
+        </div>
+        <div class="config-block" style="margin-bottom:0">
+          <div class="config-label">성별 균형</div>
+          <button id="gender-balance-btn" class="btn" style="transition:all .15s">성별 균형 ON</button>
+        </div>
+      </div>
+      <div id="guest-form" style="display:none;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">게스트 추가</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="guest-name" placeholder="이름 (선택)" style="flex:1;min-width:100px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);outline:none" />
+          <button id="guest-m-btn" class="btn" style="padding:8px 14px;background:var(--accent);color:#fff;border-color:var(--accent)">남</button>
+          <button id="guest-f-btn" class="btn" style="padding:8px 14px">여</button>
+          <button id="guest-add-btn" class="btn primary" style="padding:8px 16px">추가</button>
+          <button id="guest-cancel-btn" class="btn ghost" style="padding:8px 12px">취소</button>
         </div>
       </div>
       <div class="search-wrap">
@@ -142,6 +158,7 @@
         <span class="search-cnt" id="attend-search-count">0명</span>
       </div>
       <div class="selected-strip" id="selected-strip"></div>
+      <button id="guest-show-btn" class="btn" style="display:none;width:100%;margin-bottom:10px;border-style:dashed;color:var(--text2)">+ 게스트 추가</button>
       <div class="member-grid" id="mgrid"></div>
       <div class="sticky-cta">
         <div class="btn-row">

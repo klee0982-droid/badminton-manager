@@ -83,7 +83,7 @@ function scoreGroup(g) {
   var restBonus = rests.reduce(function(s,v){return s+v;},0) * 40;
   var avgPenalty = Math.abs(avg - 1150) * 0.1;
   var score = eloScore + recentPenalty(g) + pairingPenalty(g) - restBonus + avgPenalty;
-  return genderTier(g) * 10000000 + score;
+  return (genderBalanceEnabled ? genderTier(g) * 10000000 : 0) + score;
 }
 
 // ── 조합 및 선택 ──
@@ -118,7 +118,7 @@ function makeAssignment(players) {
     var diff=Math.abs((ta[0].elo+ta[1].elo)-(tb[0].elo+tb[1].elo));
     var rep=(partnerHistory[pairKey(ta[0].id,ta[1].id)]||0)+(partnerHistory[pairKey(tb[0].id,tb[1].id)]||0);
     var eloScore = diff + rep*90;
-    var score = teamGenderTier(ta,tb) * 1000000 + eloScore;
+    var score = (genderBalanceEnabled ? teamGenderTier(ta,tb) * 1000000 : 0) + eloScore;
     if(score<bestScore){bestScore=score; best={teamA:ta,teamB:tb,diff:Math.round(diff/2)};}
   });
   return best;
