@@ -8,6 +8,8 @@ var courts = [null,null,null,null];
 var waitQueue = [], gameLog = [], eloDeltas = {}, sessionStats = {};
 var turn = 0;
 var pausedIds = [];
+var leftEarly = new Set();
+var notices = [];
 var currentSessionSaved = false, selectedPlayerId = null;
 var nextMemberId = Math.max.apply(null, members.map(function(m){return m.id;}).concat([0])) + 1;
 var selectedForDelete = new Set();
@@ -87,6 +89,7 @@ function assignSingleCourt(i) {
 function resetAll() {
   if(!requireAdmin())return;
   present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  leftEarly.clear();
   _tStep=0; _td={}; _tView=tourneys.length?tourneys[tourneys.length-1].id:null;
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
@@ -96,6 +99,7 @@ function startGame() {
   if(!requireAdmin())return;
   if(present.size<4){showMsg('최소 4명이 필요합니다.');return;}
   courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  leftEarly.clear();
   var pool=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return b.elo-a.elo;});
   ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();
   var cnt=Math.min(activeCourtCount,Math.floor(pool.length/4));
@@ -148,8 +152,8 @@ function editGame(idx) {
 function saveSession(status) {
   if(!gameLog.length||currentSessionSaved)return;
   var participants=new Set(); gameLog.forEach(function(g){g.teamA.concat(g.teamB).forEach(function(p){participants.add(p.id);});});
-  var attendees = members.filter(function(m){ return present.has(m.id); }).map(function(m){
-    return { id: m.id, name: m.name, elo: m.elo, gender: m.gender };
+  var attendees = members.filter(function(m){ return present.has(m.id) || leftEarly.has(m.id); }).map(function(m){
+    return { id: m.id, name: m.name, elo: m.elo, gender: m.gender, leftEarly: leftEarly.has(m.id) };
   });
   gameHistory.unshift({
     id: Date.now(),
@@ -393,6 +397,8 @@ function bind() {
     var cf=e.target.closest('[data-court-finish]');if(cf){courtFinished(Number(cf.getAttribute('data-court-finish')));return;}
     var eg=e.target.closest('[data-edit-game]');if(eg){if(requireAdmin())editGame(Number(eg.getAttribute('data-edit-game')));return;}
     var d=e.target.closest('[data-del]');if(d){delMember(d.getAttribute('data-del'));return;}
+    var dn=e.target.closest('[data-del-notice]');if(dn){deleteNotice(Number(dn.getAttribute('data-del-notice')));return;}
+    var srt=e.target.closest('[data-sort]');if(srt){_memberSort=srt.getAttribute('data-sort');renderManage();return;}
   });
   var eloDebounceTimer = null;
   document.body.addEventListener('input',function(e){
@@ -406,6 +412,13 @@ function bind() {
       }, 1000);
     }
   });
+  byId('notice-add-btn').addEventListener('click',function(){
+    if(!requireAdmin())return;
+    var inp=byId('notice-input'); var txt=inp.value.trim();
+    if(!txt){showMsg('공지 내용을 입력하세요','warn');return;}
+    saveNotice(txt); inp.value='';
+  });
+  byId('notice-input').addEventListener('keydown',function(e){if(e.key==='Enter')byId('notice-add-btn').click();});
   byId('attend-search').addEventListener('input',renderAttend);
   byId('member-search').addEventListener('input',renderManage);
   byId('player-search').addEventListener('input',renderPlayerSearch);

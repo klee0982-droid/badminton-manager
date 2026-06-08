@@ -1,3 +1,5 @@
+var _memberSort = 'name';
+
 // ── 관리자 ──
 function renderAdmin() {
   document.body.classList.toggle('admin-on', isAdmin);
@@ -14,6 +16,9 @@ function renderAdmin() {
       if(nameInput && titleEl && !nameInput.value) nameInput.value = titleEl.textContent;
     }
   }
+  var nw = byId('notice-admin-wrap');
+  if(nw) nw.style.display = isAdmin ? '' : 'none';
+  renderNotices();
 }
 function requireAdmin() {
   if(isAdmin) return true;
@@ -82,7 +87,8 @@ function renderAttend() {
   byId('attend-search-count').textContent=filtered.length+'명';
   renderSelected();
   byId('mgrid').innerHTML=filtered.length?filtered.map(function(m){
-    var on=present.has(m.id);
+    var on=present.has(m.id), early=leftEarly.has(m.id);
+    if(early) return '<button type="button" class="chip left-early" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">조기 퇴장 (출석 인정)</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
     return '<button type="button" class="chip'+(on?' present':'')+'" data-toggle="'+m.id+'"><span><div class="cname">'+esc(m.name)+' '+gBadge(m.gender,false)+'</div><div class="ctap">'+(on?'✓ 출석':'탭하여 출석')+'</div></span><span class="chip-r">'+tierBadge(m.elo)+'<span class="celo">'+m.elo+'</span></span></button>';
   }).join(''):'<div class="empty">검색 결과 없음</div>';
   var n=present.size,c=Math.min(activeCourtCount,Math.floor(n/4));
@@ -96,7 +102,9 @@ function toggleP(id) {
   if(present.has(id)) {
     present.delete(id);
     waitQueue = waitQueue.filter(function(p){ return p.id !== id; });
+    if(gameStarted) leftEarly.add(id);
   } else {
+    leftEarly.delete(id);
     present.add(id);
     if(gameStarted) {
       var m = members.find(function(x){ return x.id === id; });
@@ -313,14 +321,35 @@ function updateBulkBar() {
 }
 function renderManage() {
   var term=norm(byId('member-search').value);
-  var filtered=members.slice().sort(function(a,b){return a.name.localeCompare(b.name,'ko');}).filter(function(m){return matchesFn(m,term);});
+  var sorted=members.slice().sort(function(a,b){
+    if(_memberSort==='elo') return b.elo-a.elo;
+    if(_memberSort==='elo-asc') return a.elo-b.elo;
+    return a.name.localeCompare(b.name,'ko');
+  });
+  var filtered=sorted.filter(function(m){return matchesFn(m,term);});
   var maxElo=Math.max.apply(null,members.map(function(m){return m.elo;}).concat([1]));
+  var avgElo=members.length?Math.round(members.reduce(function(s,m){return s+m.elo;},0)/members.length):0;
+  var presentCount=members.filter(function(m){return present.has(m.id)||leftEarly.has(m.id);}).length;
+
   byId('member-search-count').textContent=filtered.length+'명';
+
+  var sb=byId('member-stats-bar');
+  if(sb) sb.innerHTML='<span>총 <b>'+members.length+'</b>명</span><span style="color:var(--border)">|</span><span>평균 ELO <b>'+avgElo+'</b></span>'+(presentCount?'<span style="color:var(--border)">|</span><span style="color:var(--accent);font-weight:700">오늘 출석 '+presentCount+'명</span>':'');
+
+  var sortBar=byId('member-sort-bar');
+  if(sortBar) sortBar.innerHTML=
+    ['name','elo','elo-asc'].map(function(k){
+      var lbl=k==='name'?'이름순':k==='elo'?'ELO↓':'ELO↑';
+      return '<button class="sort-btn'+((_memberSort===k)?' active':'')+'" data-sort="'+k+'">'+lbl+'</button>';
+    }).join('');
+
   byId('mlist').innerHTML=filtered.length?filtered.map(function(m){
     var t=getTier(m.elo),pct=Math.round(m.elo/maxElo*100);
     var checked=selectedForDelete.has(m.id);
+    var isPresent=present.has(m.id), isEarly=leftEarly.has(m.id);
+    var statusBadge=isPresent?'<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:var(--accent-light);color:var(--accent);font-weight:700">출석</span>':isEarly?'<span style="font-size:10px;padding:2px 7px;border-radius:5px;background:#f5f0ff;color:#7c4dff;font-weight:700">퇴장</span>':'';
     var checkBox=isAdmin?'<input type="checkbox" data-check-del="'+m.id+'" '+(checked?'checked':'')+' style="width:16px;height:16px;cursor:pointer;accent-color:var(--danger);flex-shrink:0"/>':'';
-    return '<div class="mrow" style="'+(checked?'background:var(--danger-light);border-radius:var(--radius-sm);padding:10px;':'')+'">'+checkBox+'<span class="mname">'+esc(m.name)+'</span>'+gBadge(m.gender,isAdmin,m.id)+'<span class="tier" style="background:'+t.bg+';color:'+t.tc+'">'+t.l+'</span><input class="elo-input" type="number" value="'+m.elo+'" min="100" max="3000" data-elo-id="'+m.id+'" '+(isAdmin?'':'disabled')+'/><div class="elo-bar"><div class="elo-fill" style="width:'+pct+'%;background:'+t.tc+'"></div></div><button class="del-btn" data-del="'+m.id+'">×</button></div>';
+    return '<div class="mrow" style="'+(checked?'background:var(--danger-light);border-radius:var(--radius-sm);padding:10px;':'')+'">'+checkBox+'<span class="mname">'+esc(m.name)+'</span>'+gBadge(m.gender,isAdmin,m.id)+'<span class="tier" style="background:'+t.bg+';color:'+t.tc+'">'+t.l+'</span>'+statusBadge+'<input class="elo-input" type="number" value="'+m.elo+'" min="100" max="3000" data-elo-id="'+m.id+'" '+(isAdmin?'':'disabled')+'/><div class="elo-bar"><div class="elo-fill" style="width:'+pct+'%;background:'+t.tc+'"></div></div><button class="del-btn" data-del="'+m.id+'">×</button></div>';
   }).join(''):'<div class="empty">검색 결과 없음</div>';
   updateBulkBar();
 }
@@ -603,4 +632,20 @@ function buildShareText(sessionList) {
   return lines.join('\n').trim();
 }
 
-function renderAll() { renderAttend(); renderManage(); renderData(); }
+function renderNotices() {
+  var el=byId('notices-section'); if(!el) return;
+  var nw=byId('notice-admin-wrap'); if(nw) nw.style.display=isAdmin?'':'none';
+  if(!notices.length){el.innerHTML='';return;}
+  el.innerHTML=notices.map(function(n){
+    var d=new Date(n.created_at);
+    var dateStr=(d.getMonth()+1)+'.'+(d.getDate());
+    return '<div class="notice-item">'+
+      '<span class="notice-icon">📢</span>'+
+      '<span class="notice-text">'+esc(n.content)+'</span>'+
+      '<span class="notice-date">'+dateStr+'</span>'+
+      (isAdmin?'<button class="notice-del" data-del-notice="'+n.id+'">×</button>':'')+
+    '</div>';
+  }).join('');
+}
+
+function renderAll() { renderAttend(); renderManage(); renderData(); renderNotices(); }

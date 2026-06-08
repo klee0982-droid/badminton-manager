@@ -53,6 +53,8 @@ button, input, textarea, select { font-family: inherit; }
 .chip { display: flex; align-items: center; justify-content: space-between; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 12px 12px; background: var(--surface); cursor: pointer; transition: all .12s; text-align: left; }
 .chip:active { transform: scale(.97); }
 .chip.present { background: var(--accent-light); border-color: var(--accent-mid); }
+.chip.left-early { background: #f5f0ff; border-color: #c4b5fd; opacity: .8; }
+.chip.left-early .ctap { color: #7c4dff; font-weight: 600; }
 .cname { font-size: 14px; font-weight: 700; }
 .ctap { font-size: 10px; color: var(--text3); margin-top: 2px; font-weight: 500; }
 .chip.present .ctap { color: var(--accent); font-weight: 700; }
@@ -154,6 +156,14 @@ button.gbadge.f { border-color: #d06aa8; }
 .elo-input { width: 72px; font-size: 12px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface2); color: var(--text); outline: none; font-family: inherit; }
 .elo-input:focus { border-color: var(--accent); }
 .elo-input:disabled { opacity: .5; }
+.sort-btn { border: 1.5px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text2); padding: 5px 12px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.sort-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+.notice-item { display: flex; align-items: center; gap: 8px; padding: 10px 13px; background: #fffbeb; border: 1.5px solid #fde68a; border-radius: var(--radius-sm); margin-bottom: 6px; }
+.notice-icon { font-size: 14px; flex-shrink: 0; }
+.notice-text { flex: 1; font-size: 13px; font-weight: 600; color: #92400e; line-height: 1.4; }
+.notice-date { font-size: 11px; color: #b45309; font-weight: 500; white-space: nowrap; }
+.notice-del { background: none; border: none; color: #b45309; cursor: pointer; font-size: 16px; padding: 0 2px; opacity: .6; flex-shrink: 0; }
+.notice-del:hover { opacity: 1; }
 .hist-row { display: flex; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .hist-row:last-child { border-bottom: none; }
 .form-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }

@@ -135,6 +135,8 @@ async function loadFromSupabase() {
       localStorage.setItem(TOURNEY_KEY, JSON.stringify(tourneys));
       renderTourneySection();
     }
+    var nr = await db.from('club_notices').select('id,content,created_at').eq('club_id',CLUB_ID).order('created_at',{ascending:false});
+    if(!nr.error && nr.data) notices = nr.data;
     saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;
   } catch(e) {
@@ -157,4 +159,22 @@ async function deleteTourneyFromSupabase(tId) {
   try {
     await db.from('club_tournaments').delete().eq('club_id', CLUB_ID).eq('tourney_id', tId);
   } catch(e) { console.warn('deleteTourneyFromSupabase:', e?.message||String(e)); }
+}
+
+async function saveNotice(text) {
+  try {
+    var res = await db.from('club_notices').insert({club_id:CLUB_ID, content:text});
+    if(res.error) throw res.error;
+    var nr = await db.from('club_notices').select('id,content,created_at').eq('club_id',CLUB_ID).order('created_at',{ascending:false});
+    if(!nr.error && nr.data) { notices = nr.data; renderNotices(); }
+    setSyncBadge('저장됨','ok');
+  } catch(e) { console.warn('saveNotice:',e?.message||String(e)); showMsg('공지 저장 실패','warn'); }
+}
+
+async function deleteNotice(id) {
+  try {
+    await db.from('club_notices').delete().eq('id',id).eq('club_id',CLUB_ID);
+    notices = notices.filter(function(n){ return n.id !== id; });
+    renderNotices();
+  } catch(e) { console.warn('deleteNotice:',e?.message||String(e)); }
 }
