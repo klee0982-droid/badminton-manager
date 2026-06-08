@@ -99,12 +99,13 @@ function toggleP(id) {
   if(!requireAdmin()) return;
   id = Number(id);
   var gameStarted = byId('play-main') && byId('play-main').style.display !== 'none';
-  if(present.has(id)) {
+  if(leftEarly.has(id)) {
+    leftEarly.delete(id);
+  } else if(present.has(id)) {
     present.delete(id);
     waitQueue = waitQueue.filter(function(p){ return p.id !== id; });
     if(gameStarted) leftEarly.add(id);
   } else {
-    leftEarly.delete(id);
     present.add(id);
     if(gameStarted) {
       var m = members.find(function(x){ return x.id === id; });
