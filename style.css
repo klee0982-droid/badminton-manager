@@ -230,8 +230,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   .result-two-col .card { flex: 1; margin-bottom: 0; }
   .member-manage-grid { display: grid; grid-template-columns: 280px 1fr; gap: 12px; align-items: start; }
   .play-grid.multi { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .play-grid.multi-many { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 1024px) {
   .play-grid.multi { grid-template-columns: repeat(3, 1fr); }
-  .play-grid.multi-4 { grid-template-columns: repeat(2, 1fr); }
+  .play-grid.multi-many { grid-template-columns: repeat(4, 1fr); }
 }

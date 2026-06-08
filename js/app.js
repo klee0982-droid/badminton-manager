@@ -4,7 +4,7 @@ var activeCourtCount = Number(localStorage.getItem('bdm_active_court_count') || 
 var members = loadJson(STORAGE_KEY, []);
 var gameHistory = loadJson(HISTORY_KEY, []);
 var present = new Set();
-var courts = [null,null,null,null];
+var courts = new Array(MAX_COURTS).fill(null);
 var waitQueue = [], gameLog = [], eloDeltas = {}, sessionStats = {};
 var turn = 0;
 var pausedIds = [];
@@ -88,7 +88,7 @@ function assignSingleCourt(i) {
 // ── 게임 흐름 ──
 function resetAll() {
   if(!requireAdmin())return;
-  present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  present.clear(); courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
   leftEarly.clear();
   _tStep=0; _td={}; _tView=tourneys.length?tourneys[tourneys.length-1].id:null;
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
@@ -98,7 +98,7 @@ function resetAll() {
 function startGame() {
   if(!requireAdmin())return;
   if(present.size<4){showMsg('최소 4명이 필요합니다.');return;}
-  courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
   leftEarly.clear();
   var pool=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return b.elo-a.elo;});
   ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();
@@ -412,6 +412,8 @@ function bind() {
       }, 1000);
     }
   });
+  byId('court-dec').addEventListener('click',function(){setActiveCourtCount(activeCourtCount-1);});
+  byId('court-inc').addEventListener('click',function(){setActiveCourtCount(activeCourtCount+1);});
   byId('notice-add-btn').addEventListener('click',function(){
     if(!requireAdmin())return;
     var inp=byId('notice-input'); var txt=inp.value.trim();

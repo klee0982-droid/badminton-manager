@@ -48,14 +48,15 @@ function adminLogout() { isAdmin=false; sessionStorage.removeItem('bdm_admin_ok'
 // ── 코트 설정 ──
 function renderCourtConfig() {
   activeCourtCount = Math.max(1,Math.min(MAX_COURTS,activeCourtCount));
-  document.querySelectorAll('[data-court-count]').forEach(function(btn){ btn.classList.toggle('active',Number(btn.getAttribute('data-court-count'))===activeCourtCount); });
   byId('court-config-hint').textContent = activeCourtCount+'코트';
+  var dec=byId('court-dec'); if(dec) dec.disabled = activeCourtCount<=1;
+  var inc=byId('court-inc'); if(inc) inc.disabled = activeCourtCount>=MAX_COURTS;
 }
 function setActiveCourtCount(n) {
   if(!requireAdmin()) return;
   activeCourtCount=Math.max(1,Math.min(MAX_COURTS,Number(n)||1));
   localStorage.setItem('bdm_active_court_count',String(activeCourtCount));
-  courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[];
+  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[];
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
   renderCourtConfig(); renderAttend();
@@ -132,12 +133,12 @@ function renderLiveView(state) {
     return;
   }
   var term = (byId('live-search')||{value:''}).value.trim().toLowerCase();
-  var COURT_COLORS = ['#2d7a3a','#185fa5','#993c1d','#6d4bb5'];
-  var COURT_NAMES = ['1코트','2코트','3코트','4코트'];
+  var COURT_PALETTE = ['#2d7a3a','#185fa5','#993c1d','#6d4bb5','#b5470f','#0f7490','#6b3fa0','#1a6b4a','#8b1a1a','#4a4a00'];
+  function courtColor(i){ return COURT_PALETTE[i % COURT_PALETTE.length]; }
 
   function playerRow(p) {
     var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
-    return '<div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);last-child:border:none">' +
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--border);text-align:center">' +
       '<span style="font-size:22px;font-weight:800;letter-spacing:-0.03em;'+(matched?'color:var(--accent)':'')+'">' + esc(p.name) + (matched?' 👈':'') + '</span>' +
     '</div>';
   }
@@ -145,20 +146,20 @@ function renderLiveView(state) {
   var html = '';
   state.courts.forEach(function(c, i) {
     if(!c) return;
-    var color = COURT_COLORS[i];
+    var color = courtColor(i);
     html +=
       '<div style="background:var(--surface);border-radius:var(--radius-lg);border:1.5px solid var(--border);overflow:hidden;margin-bottom:14px">' +
         '<div style="background:'+color+';padding:12px 16px;display:flex;align-items:center;gap:8px">' +
-          '<span style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.01em">🏸 '+COURT_NAMES[i]+'</span>' +
+          '<span style="font-size:16px;font-weight:800;color:#fff;letter-spacing:-0.01em">🏸 '+(i+1)+'코트</span>' +
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr auto 1fr">' +
           '<div style="padding:14px 16px">' +
-            '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:0.05em;margin-bottom:8px">A팀</div>' +
+            '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:0.05em;margin-bottom:8px;text-align:center">A팀</div>' +
             c.teamA.map(playerRow).join('') +
           '</div>' +
           '<div style="display:flex;align-items:center;justify-content:center;padding:0 8px;color:var(--text3);font-size:20px;font-weight:800">vs</div>' +
           '<div style="padding:14px 16px;border-left:1px solid var(--border)">' +
-            '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:0.05em;margin-bottom:8px">B팀</div>' +
+            '<div style="font-size:11px;font-weight:800;color:'+color+';letter-spacing:0.05em;margin-bottom:8px;text-align:center">B팀</div>' +
             c.teamB.map(playerRow).join('') +
           '</div>' +
         '</div>' +
@@ -176,8 +177,8 @@ function renderLiveView(state) {
           state.waitQueue.map(function(p, idx) {
             var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
             return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">' +
-              '<span style="font-size:13px;font-weight:700;color:var(--text3);min-width:20px">'+(idx+1)+'</span>' +
-              '<span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;'+(matched?'color:var(--accent)':'')+'">' + esc(p.name) + (matched?' 👈':'') + '</span>' +
+              '<span style="font-size:13px;font-weight:700;color:var(--text3);min-width:24px;text-align:right">'+(idx+1)+'</span>' +
+              '<span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;flex:1;text-align:center;'+(matched?'color:var(--accent)':'')+'">' + esc(p.name) + (matched?' 👈':'') + '</span>' +
             '</div>';
           }).join('') +
         '</div>' +
@@ -275,7 +276,7 @@ function renderPlay() {
     grid.innerHTML=courts.slice(0,activeCourtCount).map(function(_,i){return '<div id="court-slot-'+i+'"></div>';}).join('');
   }
   grid.classList.toggle('multi', activeCourtCount >= 2);
-  grid.classList.toggle('multi-4', activeCourtCount === 4);
+  grid.classList.toggle('multi-many', activeCourtCount >= 5);
   for(var i=0;i<activeCourtCount;i++) updateCourtCard(i);
   updateWaitSection();
 }

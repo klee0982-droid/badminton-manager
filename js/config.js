@@ -6,7 +6,7 @@ var ADMIN_PIN    = ''; // clubs 테이블에서 로드됨
 var STORAGE_KEY  = 'bdm_members_backup';
 var HISTORY_KEY  = 'bdm_history_backup';
 var COURT_NAMES  = ['코트 1', '코트 2', '코트 3', '코트 4'];
-var MAX_COURTS   = 4;
+var MAX_COURTS   = 20;
 var BEGINNER_ELO = 1000;
 var ADVANCED_ELO = 1400;
 

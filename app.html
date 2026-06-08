@@ -130,12 +130,10 @@
       <div id="attend-alert" style="display:none" class="alert"></div>
       <div class="config-block">
         <div class="config-label">코트 수</div>
-        <div class="seg-group">
-          <button class="seg active" data-court-count="1">1코트</button>
-          <button class="seg" data-court-count="2">2코트</button>
-          <button class="seg" data-court-count="3">3코트</button>
-          <button class="seg" data-court-count="4">4코트</button>
-          <span id="court-config-hint" style="font-size:11px;color:var(--text3);align-self:center;font-weight:500"></span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button id="court-dec" class="btn" style="padding:8px 16px;font-size:18px;font-weight:700;line-height:1">−</button>
+          <span id="court-config-hint" style="font-size:16px;font-weight:800;min-width:52px;text-align:center;color:var(--text)">1코트</span>
+          <button id="court-inc" class="btn" style="padding:8px 16px;font-size:18px;font-weight:700;line-height:1">+</button>
         </div>
       </div>
       <div class="search-wrap">
