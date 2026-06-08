@@ -73,7 +73,7 @@ function pairingPenalty(g) {
 }
 function scoreGroup(g) {
   var rests=g.map(function(p){return restScore(p.id);});
-  var range=eloRange(g), avg=avgElo(g);
+  var range=eloRange(g);
   var eloScore = range * 1.2;
   if(range > 500) eloScore += 100;
   if(range > 800) eloScore += 200;
@@ -81,8 +81,7 @@ function scoreGroup(g) {
   var adv=g.filter(function(p){return p.elo>=ADVANCED_ELO;}).length;
   if(beg>=1 && adv>=2) eloScore += 150;
   var restBonus = rests.reduce(function(s,v){return s+v;},0) * 40;
-  var avgPenalty = Math.abs(avg - 1150) * 0.1;
-  var score = eloScore + recentPenalty(g) + pairingPenalty(g) - restBonus + avgPenalty;
+  var score = eloScore + recentPenalty(g) + pairingPenalty(g) - restBonus;
   return (genderBalanceEnabled ? genderTier(g) * 10000000 : 0) + score;
 }
 
@@ -92,6 +91,8 @@ function selectFairGroup(cands) {
   if(cands.length<4) return null;
   var minPlayed = Math.min.apply(null, cands.map(function(p){return statOf(p.id).played;}));
   var must = cands.filter(function(p){return statOf(p.id).played===minPlayed;});
+  // 조합 폭발 방지: 가장 오래 쉰 순서로 최대 10명
+  if(must.length>10) must=must.slice().sort(function(a,b){return restScore(b.id)-restScore(a.id);}).slice(0,10);
   var groups = [];
   if(must.length>=4){
     groups = combinations(must,4);
@@ -115,9 +116,17 @@ function makeAssignment(players) {
   var best=null, bestScore=Infinity;
   [[[p[0],p[1]],[p[2],p[3]]],[[p[0],p[2]],[p[1],p[3]]],[[p[0],p[3]],[p[1],p[2]]]].forEach(function(x){
     var ta=x[0],tb=x[1];
+    // 팀 간 ELO 합 차이
     var diff=Math.abs((ta[0].elo+ta[1].elo)-(tb[0].elo+tb[1].elo));
-    var rep=(partnerHistory[pairKey(ta[0].id,ta[1].id)]||0)+(partnerHistory[pairKey(tb[0].id,tb[1].id)]||0);
-    var eloScore = diff + rep*90;
+    // 팀 내 ELO 편차 페널티 (큰 실력차 파트너 억제)
+    var spreadA=Math.abs(ta[0].elo-ta[1].elo), spreadB=Math.abs(tb[0].elo-tb[1].elo);
+    var spreadPenalty=(spreadA+spreadB)*0.4;
+    // 파트너 반복 페널티
+    var partnerRep=(partnerHistory[pairKey(ta[0].id,ta[1].id)]||0)+(partnerHistory[pairKey(tb[0].id,tb[1].id)]||0);
+    // 상대 반복 페널티 (같은 상대 계속 만남 억제)
+    var oppRep=0;
+    ta.forEach(function(a){tb.forEach(function(b){oppRep+=(opponentHistory[pairKey(a.id,b.id)]||0);});});
+    var eloScore = diff + spreadPenalty + partnerRep*90 + oppRep*45;
     var score = (genderBalanceEnabled ? teamGenderTier(ta,tb) * 1000000 : 0) + eloScore;
     if(score<bestScore){bestScore=score; best={teamA:ta,teamB:tb,diff:Math.round(diff/2)};}
   });
