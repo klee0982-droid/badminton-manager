@@ -87,6 +87,7 @@ function assignSingleCourt(i) {
 function resetAll() {
   if(!requireAdmin())return;
   present.clear(); courts=[null,null,null,null]; waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  _tStep=0; _td={}; _tView=tourneys.length?tourneys[tourneys.length-1].id:null;
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
   renderAll(); saveGameState();

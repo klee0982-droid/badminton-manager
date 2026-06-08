@@ -133,6 +133,7 @@ async function loadFromSupabase() {
       tourneys = tr.data.map(function(r){ return r.payload; }).filter(Boolean);
       if(!_tView && tourneys.length) _tView = tourneys[0].id;
       localStorage.setItem(TOURNEY_KEY, JSON.stringify(tourneys));
+      renderTourneySection();
     }
     saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;

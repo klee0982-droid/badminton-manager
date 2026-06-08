@@ -266,9 +266,9 @@ function renderBracketTree(t, rounds, startRi) {
       var s1=getSeedNum(t,m.t1), s2=getSeedNum(t,m.t2);
 
       var bg1=w1?'var(--accent-light)':'var(--surface2)', br1=w1?'var(--accent)':'var(--border)';
-      var fc1=w1?'var(--accent)':(done&&!w1?'var(--text3)':(!m.t1?'var(--text3)':'var(--text))'));
+      var fc1=w1?'var(--accent)':(done&&!w1?'var(--text3)':(!m.t1?'var(--text3)':'var(--text)'));
       var bg2=w2?'var(--accent-light)':'var(--surface2)', br2=w2?'var(--accent)':'var(--border)';
-      var fc2=w2?'var(--accent)':(done&&!w2?'var(--text3)':(!m.t2?'var(--text3)':'var(--text))'));
+      var fc2=w2?'var(--accent)':(done&&!w2?'var(--text3)':(!m.t2?'var(--text3)':'var(--text)'));
       var t1txt=m.t1?tLabel(m.t1,t.type).replace(/<[^>]+>/g,''):'TBD';
       var t2txt=m.t2?tLabel(m.t2,t.type).replace(/<[^>]+>/g,''):'TBD';
       var da1=canClick?' data-win="'+t.id+':'+ri+':'+mi+':1"':'';
