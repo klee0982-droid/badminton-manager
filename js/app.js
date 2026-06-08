@@ -8,7 +8,7 @@ var courts = new Array(MAX_COURTS).fill(null);
 var waitQueue = [], gameLog = [], eloDeltas = {}, sessionStats = {};
 var turn = 0;
 var pausedIds = [];
-var leftEarly = new Set();
+var leftEarly = new Set(loadJson(LEFT_EARLY_KEY, []).map(Number));
 var notices = [];
 var genderBalanceEnabled = localStorage.getItem('bdm_gender_balance') !== '0';
 var _guestGender = 'M';
@@ -125,6 +125,7 @@ function courtFinished(i) {
   recordPairings(c.teamA, c.teamB);
   waitQueue.push.apply(waitQueue,played);
   courts[i]=null;
+  assignNext(i);
   updateCourtCard(i); updateWaitSection(); renderAttend(); saveGameState();
 }
 function finishDay() {
@@ -156,7 +157,7 @@ function saveSession(status) {
   if(!gameLog.length||currentSessionSaved)return;
   var participants=new Set(); gameLog.forEach(function(g){g.teamA.concat(g.teamB).forEach(function(p){participants.add(p.id);});});
   var attendees = members.filter(function(m){ return present.has(m.id) || leftEarly.has(m.id); }).map(function(m){
-    return { id: m.id, name: m.name, elo: m.elo, gender: m.gender, leftEarly: leftEarly.has(m.id) };
+    return { id: m.id, name: m.name, elo: m.elo, gender: m.gender, leftEarly: leftEarly.has(m.id), isGuest: !!m.isGuest };
   });
   gameHistory.unshift({
     id: Date.now(),

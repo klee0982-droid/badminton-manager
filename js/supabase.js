@@ -130,7 +130,7 @@ async function loadFromSupabase() {
     // 토너먼트 로드
     var tr = await db.from('club_tournaments').select('tourney_id,payload').eq('club_id',CLUB_ID).order('tourney_id',{ascending:false});
     if(!tr.error && tr.data && tr.data.length) {
-      tourneys = tr.data.map(function(r){ return r.payload; }).filter(Boolean);
+      tourneys = tr.data.map(function(r){ var t=r.payload; if(t&&!t.directToR1) t.directToR1=[]; return t; }).filter(Boolean);
       if(!_tView && tourneys.length) _tView = tourneys[0].id;
       localStorage.setItem(TOURNEY_KEY, JSON.stringify(tourneys));
       renderTourneySection();

@@ -5,7 +5,7 @@ var CLUB_ID      = new URLSearchParams(window.location.search).get('club') || (_
 var ADMIN_PIN    = ''; // clubs 테이블에서 로드됨
 var STORAGE_KEY  = 'bdm_members_backup';
 var HISTORY_KEY  = 'bdm_history_backup';
-var COURT_NAMES  = ['코트 1', '코트 2', '코트 3', '코트 4'];
+var COURT_NAMES  = Array.from({length:20},function(_,i){return (i+1)+'코트';});
 var MAX_COURTS   = 20;
 var BEGINNER_ELO = 1000;
 var ADVANCED_ELO = 1400;
@@ -44,5 +44,6 @@ function gBadge(gender, asBtn, id) {
   return '<span class="'+cls+'">'+lbl+'</span>';
 }
 function loadJson(k, fb) { try { var r = localStorage.getItem(k); return r ? JSON.parse(r) : fb; } catch(e) { return fb; } }
-function saveLocal() { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(members)); localStorage.setItem(HISTORY_KEY,JSON.stringify(gameHistory)); } catch(e){} }
+var LEFT_EARLY_KEY = 'bdm_left_early';
+function saveLocal() { try { localStorage.setItem(STORAGE_KEY,JSON.stringify(members.filter(function(m){return !m.isGuest;}))); localStorage.setItem(HISTORY_KEY,JSON.stringify(gameHistory)); localStorage.setItem(LEFT_EARLY_KEY,JSON.stringify(Array.from(leftEarly))); } catch(e){} }
 function pairKey(a,b) { return [a,b].sort(function(x,y){return x-y;}).join('-'); }
