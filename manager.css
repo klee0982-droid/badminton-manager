@@ -163,3 +163,6 @@
   .ops-bar-r { width: 100%; }
   .ops-bar-r .btn { flex: 1; padding: 8px 6px; }
 }
+/* 토스트가 아래 버튼 탭을 가로채지 않게 — 되돌리기 버튼만 눌림 */
+.ops-toast { pointer-events: none; }
+.ops-toast button { pointer-events: auto; padding: 8px 4px; margin: -8px -4px; }
