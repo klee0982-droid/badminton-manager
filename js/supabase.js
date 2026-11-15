@@ -47,7 +47,7 @@ async function updateClubSettings(currentPin, newName, newPin) {
 
 async function saveGameState() {
   try {
-    var state = courts.some(function(c){return c!==null;}) || waitQueue.length
+    var state = typeof buildLiveState === 'function' ? buildLiveState() : courts.some(function(c){return c!==null;}) || waitQueue.length
       ? {
           courts: courts.map(function(c){
             if(!c) return null;

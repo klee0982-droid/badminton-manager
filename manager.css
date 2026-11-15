@@ -166,3 +166,27 @@
 /* 토스트가 아래 버튼 탭을 가로채지 않게 — 되돌리기 버튼만 눌림 */
 .ops-toast { pointer-events: none; }
 .ops-toast button { pointer-events: auto; padding: 8px 4px; margin: -8px -4px; }
+
+/* ── 현황 (멤버용 공유 화면) ── */
+.live-empty { text-align: center; padding: 64px 16px; color: var(--text3); font-size: 15px; font-weight: 500; }
+.live-stats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--text2); font-weight: 600; margin-bottom: 12px; }
+.live-stats b { color: var(--text); font-weight: 800; }
+.live-me-card { background: #1a1a18; color: #fff; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; font-size: 15px; font-weight: 600; line-height: 1.6; }
+.live-me-card b { font-weight: 800; }
+.live-me-card span { color: #b9b9b2; font-size: 13px; }
+.live-me { background: #fff3b0; border-radius: 4px; padding: 0 3px; }
+.ops-pname.live-me { background: #fff3b0 !important; outline: 2px solid #e0b400; }
+.ops-chip.live-hit { outline: 2px solid #e0b400; }
+.live-court .ops-pname { cursor: default; display: flex; align-items: center; justify-content: center; }
+.live-court.empty { padding: 10px 12px; }
+.live-court.empty .ops-court-hd { margin-bottom: 0; }
+.ops-wait .ops-chip-main { cursor: default; }
+.live-games { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; }
+.live-game { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--border); }
+.live-games .ops-wait-hd + .live-game { border-top: none; }
+.live-game-n { flex: none; width: 22px; font-size: 11px; font-weight: 700; color: var(--text3); text-align: right; }
+.live-game-body { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--text2); line-height: 1.5; }
+.live-game-body .w { color: var(--text); font-weight: 800; }
+.live-game-score { flex: none; display: flex; flex-direction: column; align-items: center; font-size: 14px; line-height: 1.5; color: var(--text3); }
+.live-game-score .w { color: var(--accent); }
+.live-game-meta { flex: none; font-size: 10px; font-weight: 600; color: var(--text3); text-align: right; line-height: 1.4; min-width: 34px; }

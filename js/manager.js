@@ -566,6 +566,7 @@ function renderOps() {
     '<button type="button" class="btn primary" data-ops="finish-day">종료 & 결과 →</button></div>';
 
   root.innerHTML = html;
+  if(typeof scheduleLivePublish === 'function') scheduleLivePublish(); // 다음 게임/요청 변경도 멤버 화면에 반영
 }
 function opsTickElapsed() {
   document.querySelectorAll('[data-elapsed]').forEach(function(el){
@@ -619,6 +620,7 @@ function opsHook(name) {
   window[name] = function() {
     var r = orig.apply(this, arguments);
     opsPersist();
+    if(opsStarted() && typeof scheduleLivePublish === 'function') scheduleLivePublish();
     if(byId('tab-ops') && byId('tab-ops').classList.contains('active')) renderOps();
     return r;
   };
@@ -638,7 +640,8 @@ function opsInit() {
     return origRenderAll.apply(this, arguments);
   };
   if(restored) opsToast('진행 중이던 게임을 복구했어요');
-  if(isAdmin) gotoTab('ops'); else renderOps();
+  // 공유 링크로 들어온 멤버는 바로 현황, 관리자는 운영
+  if(isAdmin) gotoTab('ops'); else { renderOps(); gotoTab('live'); }
 }
 
 opsInit();

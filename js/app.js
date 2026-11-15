@@ -130,7 +130,7 @@ function recordCourtResult(i,sa,sb) {
   var c=courts[i]; if(!c) return;
   var ch=calcElo(c.teamA,c.teamB,sa,sb);
   currentSessionSaved=false;
-  gameLog.push({courtName:COURT_NAMES[i],teamA:c.teamA.slice(),teamB:c.teamB.slice(),scoreA:sa,scoreB:sb,deltaA:ch.deltaA,deltaB:ch.deltaB,expectedA:ch.expectedA,margin:ch.margin,kA:ch.kA,kB:ch.kB});
+  gameLog.push({courtName:COURT_NAMES[i],teamA:c.teamA.slice(),teamB:c.teamB.slice(),scoreA:sa,scoreB:sb,at:new Date().toISOString(),deltaA:ch.deltaA,deltaB:ch.deltaB,expectedA:ch.expectedA,margin:ch.margin,kA:ch.kA,kB:ch.kB});
   c.teamA.forEach(function(p){eloDeltas[p.id]=(eloDeltas[p.id]||0)+ch.deltaA;});
   c.teamB.forEach(function(p){eloDeltas[p.id]=(eloDeltas[p.id]||0)+ch.deltaB;});
   var played=c.teamA.concat(c.teamB); turn++;
