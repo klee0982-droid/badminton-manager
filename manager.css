@@ -134,3 +134,32 @@
 .gn.gf::before, .ops-req-person.gf::before { background: var(--g-f); }
 .ops-req-person.on::before { box-shadow: 0 0 0 1.5px #fff; }
 .ops-legend { display: inline-flex; gap: 8px; font-size: 11px; font-weight: 700; color: var(--text3); }
+
+/* ── 휴대폰(갤럭시 360~412px) 최적화 ── */
+.ops-stepper button { width: 44px; height: 44px; }
+.ops-bar-r .btn { min-height: 44px; }
+.ops-icon { width: 44px; height: 40px; }
+.ops-pname { min-height: 42px; }
+.ops-score { height: 46px; width: 46px; }
+.ops-win { min-height: 46px; }
+.ops-next-actions .btn { min-height: 44px; }
+.ops-chip { min-height: 64px; }
+.ops-chip-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ops-chip-tools { display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+.ops-chip-tools .ops-chip-rest { flex: 1; width: 40px; padding: 0; opacity: .75; }
+.ops-chip-tools .ops-chip-rest + .ops-chip-rest { border-top: 1px solid var(--border); }
+.ops-chip.picked .ops-chip-tools, .ops-chip.picked .ops-chip-rest + .ops-chip-rest { border-color: rgba(255,255,255,.35); }
+.ops-up .ops-next-teams { flex-direction: column; align-items: flex-start; gap: 1px; }
+.ops-up .ops-next-teams em { margin-right: 2px; }
+.ops-foot .btn { min-height: 46px; flex: 1; }
+.ops-foot .btn[data-ops="finish-day"] { flex: 1 1 100%; order: 3; min-height: 50px; font-size: 15px; }
+.ops-req-person, .ops-req-type { min-height: 42px; }
+/* 토스트는 엄지가 누르는 하단 버튼을 가리지 않게 상단(탭바 아래)에 */
+.ops-toast { bottom: auto; top: calc(64px + env(safe-area-inset-top, 0px)); }
+@media (max-width: 480px) {
+  #tab-ops .section-header { margin-bottom: 10px; }
+  #tab-ops .section-desc { display: none; }
+  .ops-bar { gap: 8px; }
+  .ops-bar-r { width: 100%; }
+  .ops-bar-r .btn { flex: 1; padding: 8px 6px; }
+}

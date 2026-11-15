@@ -493,7 +493,7 @@ function renderOps() {
     '<div class="ops-bar-r">' +
       '<div class="ops-stepper">' + opsStepperInner() + '</div>' +
       '<button type="button" class="btn" data-ops="lesson">📚 레슨</button>' +
-      '<button type="button" class="btn" data-ops="copy-all">📋 전체 현황 복사</button>' +
+      '<button type="button" class="btn" data-ops="copy-all">📋 현황 복사</button>' +
     '</div></div>';
 
   // 다음 3게임
@@ -506,7 +506,7 @@ function renderOps() {
       var a = makeAssignment(u.group);
       html += '<div class="ops-up' + (k === 0 ? ' first' : '') + '">' +
         '<span class="ops-up-n">' + (k + 1) + '</span>' +
-        '<div class="ops-up-body"><div class="ops-next-teams"><span>' + opsNamesHtml(a.teamA) + '</span><em>vs</em><span>' + opsNamesHtml(a.teamB) + '</span></div>' +
+        '<div class="ops-up-body"><div class="ops-next-teams"><span>' + opsNamesHtml(a.teamA) + '</span><span><em>vs</em> ' + opsNamesHtml(a.teamB) + '</span></div>' +
         (k === 0 ? opsRequestNotes(u.group) : opsMetNotes(u.group)) + '</div>' +
         '<span class="ops-up-diff">Δ' + a.diff + '</span></div>';
     });
@@ -539,10 +539,10 @@ function renderOps() {
     return '<div class="ops-chip' + (picked ? ' picked' : planned ? ' planned' : '') + ' ' + opsG(p) + '">' +
       '<button type="button" class="ops-chip-main" data-ops="pick" data-id="' + p.id + '">' +
         '<span class="ops-chip-name">' + esc(p.name) + '</span>' +
-        '<span class="ops-chip-meta">' + s.played + '게임' + (order[p.id] ? ' · 다음 ' + order[p.id] + '번' : '') + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span>' +
+        '<span class="ops-chip-meta">' + s.played + '게임' + (order[p.id] ? ' · 다음' + order[p.id] : '') + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span>' +
         (opsReqLabel(p) ? '<span class="ops-chip-req">' + esc(opsReqLabel(p)) + '</span>' : '') + '</button>' +
-      '<button type="button" class="ops-chip-rest" data-ops="req" data-id="' + p.id + '" title="요청 (남복/여복/혼복/같이)">🎯</button>' +
-      '<button type="button" class="ops-chip-rest" data-pause-wait="' + p.id + '" title="휴식">💤</button></div>';
+      '<div class="ops-chip-tools"><button type="button" class="ops-chip-rest" data-ops="req" data-id="' + p.id + '" title="요청 (남복/여복/혼복/같이)" aria-label="요청">🎯</button>' +
+      '<button type="button" class="ops-chip-rest" data-pause-wait="' + p.id + '" title="휴식" aria-label="휴식">💤</button></div></div>';
   }).join('') || '<div class="ops-empty-note">대기자 없음</div>';
   html += '</div>';
   if(lessonIds.length) {
@@ -561,9 +561,9 @@ function renderOps() {
   html += '</div>';
 
   html += '<div class="btn-row ops-foot">' +
-    '<button type="button" class="btn" data-ops="goto-attend">+ 늦게 온 사람 / 게스트</button>' +
+    '<button type="button" class="btn" data-ops="goto-attend">+ 출석 · 게스트</button>' +
     (_opsUndo.length ? '<button type="button" class="btn" data-ops="undo">↶ 되돌리기</button>' : '') +
-    '<button type="button" class="btn primary" data-ops="finish-day" style="flex:1">종료 & 결과 →</button></div>';
+    '<button type="button" class="btn primary" data-ops="finish-day">종료 & 결과 →</button></div>';
 
   root.innerHTML = html;
 }

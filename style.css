@@ -7,7 +7,7 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { touch-action: manipulation; }
-body { background: var(--bg); color: var(--text); font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.4; min-height: 100vh; }
+body { background: var(--bg); color: var(--text); font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif; line-height: 1.4; min-height: 100vh; }
 button, input, textarea, select { font-family: inherit; }
 .app { max-width: 480px; margin: 0 auto; padding: 0 0 100px; }
 .header { padding: 20px 20px 0; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
