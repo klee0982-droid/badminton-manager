@@ -145,6 +145,7 @@ async function loadFromSupabase() {
     var nr = await db.from('club_notices').select('id,content,created_at').eq('club_id',CLUB_ID).order('created_at',{ascending:false});
     if(!nr.error && nr.data) notices = nr.data;
     saveLocal(); renderAll(); renderLiveView(_lastLiveState); startRealtimeLive(); setSyncBadge('연결됨','ok');
+    if(isAdmin && typeof syncInit === 'function') syncInit(); // 멤버 목록 로드 후 공유 세션 불러오기
     byId('data-msg').textContent = 'Supabase 연결 완료: '+SUPABASE_URL;
   } catch(e) {
     console.warn('loadFromSupabase:',e?.message||String(e)); setSyncBadge('오류','bad');

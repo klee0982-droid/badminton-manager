@@ -150,5 +150,5 @@ scheduleLivePublish = scheduleSync;
 (function(){
   document.addEventListener('visibilitychange', function(){ if(!document.hidden && _sync.ready) syncFetch(); });
   setInterval(function(){ if(_sync.ready && !document.hidden) syncFetch(); }, 20000); // 실시간 끊김 대비
-  if(isAdmin) syncInit();
+  // syncInit은 loadFromSupabase 끝에서 호출 (멤버 목록이 먼저 있어야 게스트·이름이 맞음)
 })();

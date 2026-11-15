@@ -620,7 +620,7 @@ function opsHook(name) {
   window[name] = function() {
     var r = orig.apply(this, arguments);
     opsPersist();
-    if(opsStarted() && typeof scheduleLivePublish === 'function') scheduleLivePublish();
+    if(typeof scheduleLivePublish === 'function') scheduleLivePublish(); // 시작 전 출석 변경도 다른 관리자에게 공유
     if(byId('tab-ops') && byId('tab-ops').classList.contains('active')) renderOps();
     return r;
   };
