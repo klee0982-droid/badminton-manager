@@ -102,3 +102,22 @@
 .ops-req-person { border: 1.5px solid var(--border); background: var(--surface); border-radius: 999px; padding: 6px 11px; font-size: 13px; font-weight: 700; cursor: pointer; color: var(--text); }
 .ops-req-person.on { background: #6b3fa0; border-color: #6b3fa0; color: #fff; }
 .btn:disabled { opacity: .45; cursor: default; }
+
+/* 다음 3게임 */
+.ops-up { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-top: 1px solid var(--accent-mid); }
+.ops-up.first { border-top: none; padding-top: 2px; }
+.ops-up-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); color: var(--accent); font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+.ops-up.first .ops-up-n { background: var(--accent); color: #fff; }
+.ops-up-body { flex: 1; min-width: 0; }
+.ops-up .ops-next-teams { justify-content: flex-start; text-align: left; font-size: 15px; margin-bottom: 4px; }
+.ops-up.first .ops-next-teams { font-size: 17px; }
+.ops-up:not(.first) .ops-next-teams { color: var(--text2); }
+.ops-up-diff { flex: none; font-size: 11px; font-weight: 600; color: var(--text3); margin-top: 3px; }
+.ops-up .ops-notes { margin: 0 0 2px; }
+.ops-next-actions { margin-top: 6px; }
+
+/* 레슨 */
+.ops-chip.lesson { background: #eef4ff; border-color: #b9cdf0; border-style: dashed; }
+.ops-link { margin-left: auto; border: none; background: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
+.ops-lesson-scroll { max-height: 46vh; overflow-y: auto; }
+.ops-req-person small { font-size: 10px; font-weight: 600; opacity: .7; }

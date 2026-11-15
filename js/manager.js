@@ -37,6 +37,7 @@ function opsSnapshot() {
     activeCourtCount: activeCourtCount,
     currentSessionSaved: currentSessionSaved,
     playRequests: playRequests,
+    lessonIds: lessonIds,
     guests: members.filter(function(m){ return m.isGuest; }).map(opsPlayer)
   }));
 }
@@ -58,6 +59,7 @@ function opsApplySnapshot(s) {
   partnerHistory = s.partnerHistory; opponentHistory = s.opponentHistory;
   activeCourtCount = s.activeCourtCount; currentSessionSaved = s.currentSessionSaved;
   playRequests = s.playRequests || {};
+  lessonIds = s.lessonIds || [];
   renderCourtConfig();
 }
 
@@ -100,6 +102,17 @@ function opsCurrentPlan() {
   if(!plans.length) return null;
   if(_opsPick >= plans.length) _opsPick = 0;
   return { group:plans[_opsPick], manual:false, idx:_opsPick, total:plans.length };
+}
+// 현재 대기자 기준으로 다음 n게임을 순서대로 미리 계산
+function opsUpcoming(n) {
+  var first = opsCurrentPlan(); if(!first) return [];
+  var out = [first], pool = waitQueue.filter(function(p){ return first.group.indexOf(p) < 0; });
+  while(out.length < n) {
+    var g = selectFairGroup(pool); if(!g) break;
+    out.push({ group:g });
+    pool = pool.filter(function(p){ return g.indexOf(p) < 0; });
+  }
+  return out;
 }
 function opsCyclePlan() { _opsManual = []; _opsPick++; renderOps(); }
 function opsToggleManual(id) {
@@ -144,6 +157,107 @@ function opsFinish(i, winner) {
   delete _opsScores[i];
   renderPlay(); renderAttend(); saveGameState(); renderOps();
   opsToast(COURT_NAMES[i] + ' ' + sa + ':' + sb + ' 기록됨', true);
+}
+
+// ── 레슨 ──
+function opsSendToLesson(ids) {
+  if(!requireAdmin() || !ids.length) return;
+  opsPushUndo('레슨 보내기');
+  var names = [], notes = [];
+  ids = ids.map(Number);
+  // 대기/휴식에서 먼저 빼서 교체 후보에 안 들어가게
+  waitQueue = waitQueue.filter(function(p){ return ids.indexOf(p.id) < 0; });
+  pausedIds = pausedIds.filter(function(x){ return ids.indexOf(x) < 0; });
+  ids.forEach(function(id){
+    var m = members.find(function(x){ return x.id === id; }); if(!m) return;
+    for(var i = 0; i < MAX_COURTS; i++) {
+      var c = courts[i];
+      if(!c || !c.teamA.concat(c.teamB).some(function(p){ return p.id === id; })) continue;
+      var rep = bestReplacement(c, id);
+      if(rep) {
+        var keep = c.teamA.concat(c.teamB).filter(function(p){ return p.id !== id; }).concat([rep.cand]);
+        waitQueue = waitQueue.filter(function(p){ return p.id !== rep.cand.id; });
+        courts[i] = makeAssignment(keep); courts[i].startedAt = c.startedAt || Date.now();
+        notes.push(COURT_NAMES[i] + ' ' + rep.cand.name + ' 투입');
+      } else {
+        // 교체할 대기자가 없으면 그 게임은 취소, 나머지 3명은 대기열 맨 앞으로
+        var rest3 = c.teamA.concat(c.teamB).filter(function(p){ return p.id !== id; });
+        waitQueue.unshift.apply(waitQueue, rest3);
+        courts[i] = null;
+        notes.push(COURT_NAMES[i] + ' 게임 취소(대기자 없음)');
+      }
+    }
+    if(lessonIds.indexOf(id) < 0) lessonIds.push(id);
+    names.push(m.name);
+  });
+  _opsManual = _opsManual.filter(function(x){ return ids.indexOf(x) < 0; }); _opsPick = 0;
+  renderPlay(); renderAttend(); saveGameState(); renderOps();
+  opsToast('📚 ' + names.join(', ') + ' 레슨' + (notes.length ? ' · ' + notes.join(' · ') : ''), true);
+}
+function opsReturnFromLesson(ids) {
+  if(!requireAdmin()) return;
+  ids = ids.map(Number);
+  var names = [];
+  ids.forEach(function(id){
+    lessonIds = lessonIds.filter(function(x){ return x !== id; });
+    var m = members.find(function(x){ return x.id === id; });
+    var busy = waitQueue.some(function(p){ return p.id === id; }) || courts.some(function(c){ return c && c.teamA.concat(c.teamB).some(function(p){ return p.id === id; }); });
+    if(m && present.has(id) && !busy) { ensureStats([id]); waitQueue.push(m); names.push(m.name); }
+  });
+  renderPlay(); renderAttend(); saveGameState(); renderOps();
+  if(names.length) opsToast(names.join(', ') + ' 레슨 끝 → 대기열 복귀');
+}
+var _opsLessonSel = [];
+function opsOpenLesson() {
+  _opsLessonSel = [];
+  opsRenderLesson();
+  byId('ops-lesson-overlay').style.display = 'flex';
+}
+function opsCloseLesson() { byId('ops-lesson-overlay').style.display = 'none'; }
+function opsRenderLesson() {
+  function btn(p, where) {
+    var on = _opsLessonSel.indexOf(p.id) >= 0;
+    return '<button type="button" class="ops-req-person' + (on ? ' on' : '') + '" data-lesson-pick="' + p.id + '" data-name="' + esc(norm(p.name)) + '">' + esc(p.name) + (where ? ' <small>' + where + '</small>' : '') + '</button>';
+  }
+  var onCourt = [];
+  courts.slice(0, activeCourtCount).forEach(function(c, i){ if(c) c.teamA.concat(c.teamB).forEach(function(p){ onCourt.push(btn(p, (i + 1) + '코트')); }); });
+  var paused = pausedIds.map(function(id){ return members.find(function(m){ return m.id === id; }); }).filter(Boolean);
+  byId('ops-lesson-sheet').innerHTML =
+    '<div class="swap-title">📚 레슨 보내기</div>' +
+    '<div class="swap-sub">게임 중인 사람은 대기자 중 가장 잘 맞는 사람으로 자동 교체돼요. 레슨이 끝나면 운영 화면에서 눌러서 복귀시키세요.</div>' +
+    '<input type="text" class="ops-req-search" id="ops-lesson-search" placeholder="이름 검색">' +
+    '<div class="ops-lesson-scroll">' +
+      (waitQueue.length ? '<div class="ops-req-sub">⏳ 대기</div><div class="ops-req-list">' + waitQueue.map(function(p){ return btn(p); }).join('') + '</div>' : '') +
+      (onCourt.length ? '<div class="ops-req-sub" style="margin-top:10px">🏸 게임 중</div><div class="ops-req-list">' + onCourt.join('') + '</div>' : '') +
+      (paused.length ? '<div class="ops-req-sub" style="margin-top:10px">💤 휴식</div><div class="ops-req-list">' + paused.map(function(p){ return btn(p); }).join('') + '</div>' : '') +
+    '</div>' +
+    '<button type="button" class="btn primary" data-lesson-send style="width:100%;margin-top:12px;padding:13px"' + (_opsLessonSel.length ? '' : ' disabled') + '>📚 ' + _opsLessonSel.length + '명 레슨 보내기</button>' +
+    '<button type="button" class="swap-cancel" data-lesson-close>닫기</button>';
+}
+function opsFilterLesson() {
+  var q = norm(byId('ops-lesson-search').value);
+  document.querySelectorAll('#ops-lesson-sheet [data-lesson-pick]').forEach(function(b){
+    b.hidden = !!q && b.getAttribute('data-name').indexOf(q) < 0 && !b.classList.contains('on');
+  });
+}
+function opsBindLesson() {
+  var ov = document.createElement('div');
+  ov.className = 'swap-overlay'; ov.id = 'ops-lesson-overlay'; ov.style.display = 'none';
+  ov.innerHTML = '<div class="swap-sheet" id="ops-lesson-sheet"></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){
+    if(e.target === ov || e.target.closest('[data-lesson-close]')) return opsCloseLesson();
+    var b = e.target.closest('[data-lesson-pick]');
+    if(b) {
+      var id = Number(b.getAttribute('data-lesson-pick')), at = _opsLessonSel.indexOf(id);
+      if(at >= 0) _opsLessonSel.splice(at, 1); else _opsLessonSel.push(id);
+      var q = byId('ops-lesson-search').value;
+      opsRenderLesson(); byId('ops-lesson-search').value = q; opsFilterLesson();
+      return;
+    }
+    if(e.target.closest('[data-lesson-send]')) { var sel = _opsLessonSel.slice(); opsCloseLesson(); opsSendToLesson(sel); }
+  });
+  ov.addEventListener('input', function(e){ if(e.target.id === 'ops-lesson-search') opsFilterLesson(); });
 }
 
 // ── 요청 설정 시트 ──
@@ -255,13 +369,15 @@ function opsAllText() {
     var c = courts[i];
     lines.push(COURT_NAMES[i] + ': ' + (c ? opsNames(c.teamA) + ' vs ' + opsNames(c.teamB) : '(비어 있음)'));
   }
-  var plan = opsCurrentPlan();
-  if(plan) {
-    var asg = makeAssignment(plan.group);
-    lines.push('', '⏭ 다음 게임: ' + opsNames(asg.teamA) + ' vs ' + opsNames(asg.teamB));
+  var up = opsUpcoming(3), queued = [];
+  if(up.length) {
+    lines.push('', '⏭ 다음 게임');
+    up.forEach(function(u, k){ var a = makeAssignment(u.group); queued = queued.concat(u.group); lines.push((k + 1) + '. ' + opsNames(a.teamA) + ' vs ' + opsNames(a.teamB)); });
   }
-  var rest = waitQueue.filter(function(p){ return !plan || plan.group.indexOf(p) < 0; });
+  var rest = waitQueue.filter(function(p){ return queued.indexOf(p) < 0; });
   if(rest.length) lines.push('⏳ 대기: ' + rest.map(function(p){ return p.name; }).join(', '));
+  var les = lessonIds.map(function(id){ var m = members.find(function(x){ return x.id === id; }); return m && m.name; }).filter(Boolean);
+  if(les.length) lines.push('📚 레슨: ' + les.join(', '));
   return lines.join('\n');
 }
 function opsCopy(text, okMsg) {
@@ -335,6 +451,11 @@ function opsRequestNotes(group) {
   });
   return notes.length ? '<div class="ops-notes">' + notes.join('') + '</div>' : '';
 }
+function opsMetNotes(group) {
+  var notes = group.filter(function(p){ var r = activeRequest(p); return r && requestSatisfied(r, group); })
+    .map(function(p){ var r = activeRequest(p); return '<span class="ops-note ok">🎯 ' + esc(p.name) + ' ' + (r.type === 'WITH' ? '같이' : REQUEST_TYPES[r.type]) + '</span>'; });
+  return notes.length ? '<div class="ops-notes">' + notes.join('') + '</div>' : '';
+}
 function opsStepperInner() {
   return '<button type="button" data-ops="courts" data-n="' + (activeCourtCount - 1) + '"' + (activeCourtCount <= 1 ? ' disabled' : '') + ' aria-label="코트 줄이기">−</button>' +
     '<span>' + activeCourtCount + '코트</span>' +
@@ -366,25 +487,32 @@ function renderOps() {
 
   // 상단 요약 + 코트 수
   html += '<div class="ops-bar">' +
-    '<div class="ops-stats"><b>' + playing + '</b> 게임 중 · <b>' + waitQueue.length + '</b> 대기 · <b>' + pausedIds.length + '</b> 휴식 · <b>' + gameLog.length + '</b> 게임 완료</div>' +
+    '<div class="ops-stats"><b>' + playing + '</b> 게임 중 · <b>' + waitQueue.length + '</b> 대기 · <b>' + pausedIds.length + '</b> 휴식 · ' + (lessonIds.length ? '<b>' + lessonIds.length + '</b> 레슨 · ' : '') + '<b>' + gameLog.length + '</b> 게임 완료</div>' +
     '<div class="ops-bar-r">' +
       '<div class="ops-stepper">' + opsStepperInner() + '</div>' +
+      '<button type="button" class="btn" data-ops="lesson">📚 레슨</button>' +
       '<button type="button" class="btn" data-ops="copy-all">📋 전체 현황 복사</button>' +
     '</div></div>';
 
-  // 다음 게임
+  // 다음 3게임
+  var upcoming = opsUpcoming(3);
   html += '<div class="ops-next">';
   if(plan) {
-    var asg = makeAssignment(plan.group);
-    var tag = plan.manual ? '직접 구성' : '추천 ' + (plan.idx + 1) + '/' + plan.total;
-    html += '<div class="ops-next-hd"><span>⏭ 다음 게임</span><span class="ops-tag">' + tag + '</span><span class="ops-diff">팀 차이 Δ' + asg.diff + '</span></div>' +
-      '<div class="ops-next-teams"><span>' + esc(opsNames(asg.teamA)) + '</span><em>vs</em><span>' + esc(opsNames(asg.teamB)) + '</span></div>' +
-      opsRequestNotes(plan.group) +
-      '<div class="ops-next-actions">' +
+    var tag = plan.manual ? '1번: 직접 구성' : '1번: 추천 ' + (plan.idx + 1) + '/' + plan.total;
+    html += '<div class="ops-next-hd"><span>⏭ 다음 게임</span><span class="ops-tag">' + tag + '</span><span class="ops-diff">지금 대기자 기준</span></div>';
+    upcoming.forEach(function(u, k){
+      var a = makeAssignment(u.group);
+      html += '<div class="ops-up' + (k === 0 ? ' first' : '') + '">' +
+        '<span class="ops-up-n">' + (k + 1) + '</span>' +
+        '<div class="ops-up-body"><div class="ops-next-teams"><span>' + esc(opsNames(a.teamA)) + '</span><em>vs</em><span>' + esc(opsNames(a.teamB)) + '</span></div>' +
+        (k === 0 ? opsRequestNotes(u.group) : opsMetNotes(u.group)) + '</div>' +
+        '<span class="ops-up-diff">Δ' + a.diff + '</span></div>';
+    });
+    html += '<div class="ops-next-actions">' +
         (plan.manual
           ? '<button type="button" class="btn" data-ops="clear-manual">선택 해제</button>'
-          : (plan.total > 1 ? '<button type="button" class="btn" data-ops="cycle">↻ 다른 조합</button>' : '')) +
-        '<button type="button" class="btn" data-ops="call-next">📢 미리 호출</button>' +
+          : (plan.total > 1 ? '<button type="button" class="btn" data-ops="cycle">↻ 1번 다른 조합</button>' : '')) +
+        '<button type="button" class="btn" data-ops="call-next">📢 다음 ' + upcoming.length + '게임 호출</button>' +
       '</div>';
   } else {
     html += '<div class="ops-next-hd"><span>⏭ 다음 게임</span></div><div class="ops-empty-note">대기자가 4명 이상이면 다음 조가 여기 표시돼요</div>';
@@ -398,6 +526,8 @@ function renderOps() {
 
   // 대기 / 휴식
   var inPlan = plan ? plan.group.map(function(p){ return p.id; }) : [];
+  var order = {};
+  upcoming.forEach(function(u, k){ u.group.forEach(function(p){ order[p.id] = k + 1; }); });
   html += '<div class="ops-wait"><div class="ops-wait-hd"><span>⏳ 대기 ' + waitQueue.length + '명</span>' +
     '<span class="ops-hint">이름 4명 선택 = 직접 조 짜기 · 🎯 = 남복/여복/혼복/같이 요청</span></div><div class="ops-chips">';
   html += waitQueue.map(function(p){
@@ -406,12 +536,19 @@ function renderOps() {
     return '<div class="ops-chip' + (picked ? ' picked' : planned ? ' planned' : '') + (p.gender === 'F' ? ' f' : '') + '">' +
       '<button type="button" class="ops-chip-main" data-ops="pick" data-id="' + p.id + '">' +
         '<span class="ops-chip-name">' + esc(p.name) + '</span>' +
-        '<span class="ops-chip-meta">' + s.played + '게임' + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span>' +
+        '<span class="ops-chip-meta">' + s.played + '게임' + (order[p.id] ? ' · 다음 ' + order[p.id] + '번' : '') + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span>' +
         (opsReqLabel(p) ? '<span class="ops-chip-req">' + esc(opsReqLabel(p)) + '</span>' : '') + '</button>' +
       '<button type="button" class="ops-chip-rest" data-ops="req" data-id="' + p.id + '" title="요청 (남복/여복/혼복/같이)">🎯</button>' +
       '<button type="button" class="ops-chip-rest" data-pause-wait="' + p.id + '" title="휴식">💤</button></div>';
   }).join('') || '<div class="ops-empty-note">대기자 없음</div>';
   html += '</div>';
+  if(lessonIds.length) {
+    html += '<div class="ops-wait-hd" style="margin-top:12px"><span>📚 레슨 중 ' + lessonIds.length + '명</span><span class="ops-hint">눌러서 복귀</span>' +
+      (lessonIds.length > 1 ? '<button type="button" class="ops-link" data-ops="lesson-return-all">모두 복귀</button>' : '') + '</div><div class="ops-chips">' +
+      lessonIds.map(function(id){ return members.find(function(m){ return m.id === id; }); }).filter(Boolean).map(function(p){
+        return '<div class="ops-chip lesson"><button type="button" class="ops-chip-main" data-ops="lesson-return" data-id="' + p.id + '"><span class="ops-chip-name">' + esc(p.name) + '</span><span class="ops-chip-meta">' + statOf(p.id).played + '게임 · 복귀</span></button></div>';
+      }).join('') + '</div>';
+  }
   if(pausedIds.length) {
     html += '<div class="ops-wait-hd" style="margin-top:12px"><span>💤 휴식 ' + pausedIds.length + '명</span><span class="ops-hint">눌러서 복귀</span></div><div class="ops-chips">' +
       pausedIds.map(function(id){ return members.find(function(m){ return m.id === id; }); }).filter(Boolean).map(function(p){
@@ -445,14 +582,16 @@ function opsBind() {
     else if(act === 'win') opsFinish(i, b.getAttribute('data-side'));
     else if(act === 'call') opsCopy(opsCourtText(i), COURT_NAMES[i] + ' 호출 문구 복사됨');
     else if(act === 'call-next') {
-      var plan = opsCurrentPlan(); if(!plan) return;
-      var asg = makeAssignment(plan.group);
-      opsCopy('⏭ 다음 게임 준비해주세요\n' + opsNames(asg.teamA) + '  vs  ' + opsNames(asg.teamB), '다음 게임 호출 문구 복사됨');
+      var up = opsUpcoming(3); if(!up.length) return;
+      opsCopy('⏭ 다음 게임 순서\n' + up.map(function(u, k){ var a = makeAssignment(u.group); return (k + 1) + '. ' + opsNames(a.teamA) + '  vs  ' + opsNames(a.teamB); }).join('\n'), '다음 ' + up.length + '게임 호출 문구 복사됨');
     }
     else if(act === 'copy-all') opsCopy(opsAllText(), '전체 현황 복사됨');
     else if(act === 'cycle') opsCyclePlan();
     else if(act === 'pick') opsToggleManual(b.getAttribute('data-id'));
     else if(act === 'req') opsOpenRequest(b.getAttribute('data-id'));
+    else if(act === 'lesson') opsOpenLesson();
+    else if(act === 'lesson-return') opsReturnFromLesson([b.getAttribute('data-id')]);
+    else if(act === 'lesson-return-all') opsReturnFromLesson(lessonIds.slice());
     else if(act === 'clear-manual') { _opsManual = []; renderOps(); }
     else if(act === 'courts') opsSetCourts(Number(b.getAttribute('data-n')));
     else if(act === 'undo') opsUndo();
@@ -484,6 +623,7 @@ function opsHook(name) {
 function opsInit() {
   opsBind();
   opsBindRequest();
+  opsBindLesson();
   var restored = opsRestore();
   ['renderAttend', 'updateWaitSection', 'renderPlay', 'renderAdmin'].forEach(opsHook);
   // Supabase 로드(이미 진행 중)가 멤버 목록을 덮어써도 복구된 게스트가 사라지지 않게

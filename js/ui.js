@@ -69,7 +69,7 @@ function setActiveCourtCount(n) {
   if(typeof opsSetCourts==='function' && opsStarted()) { opsSetCourts(Number(n)||1); return; }
   activeCourtCount=Math.max(1,Math.min(MAX_COURTS,Number(n)||1));
   localStorage.setItem('bdm_active_court_count',String(activeCourtCount));
-  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; playRequests={};
+  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; playRequests={}; lessonIds=[];
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
   renderCourtConfig(); renderAttend();
@@ -120,6 +120,8 @@ function toggleP(id) {
   } else if(present.has(id)) {
     present.delete(id);
     waitQueue = waitQueue.filter(function(p){ return p.id !== id; });
+    lessonIds = lessonIds.filter(function(x){ return x !== id; });
+    pausedIds = pausedIds.filter(function(x){ return x !== id; });
     if(gameStarted) leftEarly.add(id);
   } else {
     present.add(id);
@@ -200,6 +202,15 @@ function renderLiveView(state) {
       '</div>';
   }
 
+  if(state.lesson && state.lesson.length) {
+    html += '<div style="background:var(--surface);border-radius:var(--radius-lg);border:1.5px solid var(--border);padding:12px 16px;margin-top:14px">' +
+      '<span style="font-size:14px;font-weight:800;color:var(--text2)">📚 레슨 중</span>' +
+      '<span style="font-size:12px;font-weight:600;color:var(--text3);margin-left:6px">'+state.lesson.length+'명</span>' +
+      '<div style="font-size:17px;font-weight:700;margin-top:8px;line-height:1.7">' + state.lesson.map(function(p){
+        var matched = term && p.name.toLowerCase().indexOf(term) >= 0;
+        return '<span style="'+(matched?'color:var(--accent)':'')+'">'+esc(p.name)+(matched?' 👈':'')+'</span>';
+      }).join(' · ') + '</div></div>';
+  }
   el.innerHTML = html;
   if(updEl && state.updatedAt) {
     var d = new Date(state.updatedAt);
@@ -297,9 +308,22 @@ function renderPlay() {
 }
 
 // ── 교체 팝업 ──
+var _swapToLesson = false;
+function renderSwapDest() {
+  document.querySelectorAll('[data-swap-dest]').forEach(function(b){
+    var on = (b.getAttribute('data-swap-dest') === 'lesson') === _swapToLesson;
+    b.style.background = on ? 'var(--accent)' : 'var(--surface)';
+    b.style.color = on ? '#fff' : 'var(--text2)';
+    b.style.borderColor = on ? 'var(--accent)' : 'var(--border)';
+  });
+}
 function openSwapPopup(courtIdx, leaving) {
+  _swapToLesson = false;
   byId('swap-title').textContent = leaving.name + ' 교체';
-  byId('swap-sub').textContent = '대기 중인 선수 중 교체할 사람을 선택하세요.';
+  byId('swap-sub').innerHTML = '<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px"><span style="font-size:12px;font-weight:700">빠지는 선수 →</span>' +
+    '<button type="button" class="btn" data-swap-dest="wait" style="padding:6px 12px;font-size:12px">대기 1순위</button>' +
+    '<button type="button" class="btn" data-swap-dest="lesson" style="padding:6px 12px;font-size:12px">📚 레슨</button></div>' +
+    '대기 중인 선수 중 교체할 사람을 선택하세요.';
   byId('swap-list').innerHTML = waitQueue.map(function(p) {
     var t = getTier(p.elo), eloDiff = p.elo - leaving.elo;
     var diffStr = eloDiff > 0 ? '+'+eloDiff : String(eloDiff);
@@ -309,6 +333,7 @@ function openSwapPopup(courtIdx, leaving) {
       '<span class="tier" style="background:'+t.bg+';color:'+t.tc+'">'+t.l+'</span>'+gBadge(p.gender, false)+
       '<span style="font-size:12px;font-weight:800;color:'+diffColor+'">'+diffStr+'</span></div>';
   }).join('') || '<div style="font-size:13px;color:var(--text3);padding:12px 0;text-align:center">대기자 없음</div>';
+  renderSwapDest();
   byId('swap-overlay').style.display = 'flex';
 }
 function closeSwapPopup() { byId('swap-overlay').style.display = 'none'; }

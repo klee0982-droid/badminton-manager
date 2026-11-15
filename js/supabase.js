@@ -58,6 +58,7 @@ async function saveGameState() {
             };
           }),
           waitQueue: waitQueue.map(function(p){return {id:p.id,name:p.name};}),
+          lesson: lessonIds.map(function(id){ var m=members.find(function(x){return x.id===id;}); return m ? {id:m.id,name:m.name} : null; }).filter(Boolean),
           updatedAt: new Date().toISOString()
         }
       : null;

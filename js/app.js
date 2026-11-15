@@ -16,6 +16,7 @@ var currentSessionSaved = false, selectedPlayerId = null;
 var nextMemberId = Math.max.apply(null, members.map(function(m){return m.id;}).concat([0])) + 1;
 var selectedForDelete = new Set();
 var partnerHistory = {}, opponentHistory = {};
+var lessonIds = []; // 레슨 중인 선수 (대기열/코트에서 빠짐, 복귀 시 대기열로)
 var playRequests = {}; // 선수별 요청 {type:'MD'|'WD'|'XD'|'WITH', with:[id], held:n} — 1게임 사용 후 소멸
 
 // ── 코트/대기 관리 ──
@@ -73,13 +74,16 @@ function confirmSwap(courtIdx, leavingId, candidateId) {
     .filter(function(p){return p.id!==leavingId;})
     .concat([cand]);
   waitQueue = waitQueue.filter(function(p){return p.id!==candidateId;});
-  waitQueue.unshift(leaving);
+  var toLesson = typeof _swapToLesson !== 'undefined' && _swapToLesson;
+  if(toLesson) { if(lessonIds.indexOf(leaving.id) < 0) lessonIds.push(leaving.id); }
+  else waitQueue.unshift(leaving);
   var startedAt = c.startedAt;
   courts[courtIdx] = makeAssignment(newPlayers);
   if(courts[courtIdx]) courts[courtIdx].startedAt = startedAt || Date.now();
   closeSwapPopup();
   renderPlay(); renderAttend();
-  showMsg(leaving.name+' → '+cand.name+' 교체 ('+leaving.name+' 대기열 1순위)','info');
+  saveGameState();
+  showMsg(leaving.name+' → '+cand.name+' 교체 ('+leaving.name+(toLesson?' 레슨':' 대기열 1순위')+')','info');
 }
 function assignSingleCourt(i) {
   if(!requireAdmin()) return;
@@ -93,7 +97,7 @@ function assignSingleCourt(i) {
 // ── 게임 흐름 ──
 function resetAll() {
   if(!requireAdmin())return;
-  present.clear(); courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false; playRequests={};
+  present.clear(); courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false; playRequests={}; lessonIds=[];
   leftEarly.clear();
   members = members.filter(function(m){ return !m.isGuest; });
   _tStep=0; _td={}; _tView=tourneys.length?tourneys[tourneys.length-1].id:null;
@@ -104,7 +108,7 @@ function resetAll() {
 function startGame() {
   if(!requireAdmin())return;
   if(present.size<4){showMsg('최소 4명이 필요합니다.');return;}
-  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false; playRequests={};
+  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false; playRequests={}; lessonIds=[];
   leftEarly.clear();
   var pool=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return b.elo-a.elo;});
   ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();
@@ -445,6 +449,7 @@ function bind() {
     var pw=e.target.closest('[data-pause-wait]');if(pw){pauseFromWait(pw.getAttribute('data-pause-wait'));return;}
     var rv=e.target.closest('[data-resume]');if(rv){resumePlayer(rv.getAttribute('data-resume'));return;}
     var rp=e.target.closest('[data-replace]');if(rp){var rArr=rp.getAttribute('data-replace').split(':');replaceFromCourt(Number(rArr[0]),Number(rArr[1]));return;}
+    var sd=e.target.closest('[data-swap-dest]');if(sd){_swapToLesson=sd.getAttribute('data-swap-dest')==='lesson';renderSwapDest();return;}
     var sc=e.target.closest('[data-swap-confirm]');if(sc){var sArr=sc.getAttribute('data-swap-confirm').split(':');confirmSwap(Number(sArr[0]),Number(sArr[1]),Number(sArr[2]));return;}
     var sb=e.target.closest('[data-score-btn]');if(sb){var p=sb.getAttribute('data-score-btn').split(':');adjustCourtScore(Number(p[0]),p[1],Number(p[2]));return;}
     var wb=e.target.closest('[data-winner-score]');if(wb){var w=wb.getAttribute('data-winner-score').split(':');setWinnerScore(Number(w[0]),w[1]);return;}
