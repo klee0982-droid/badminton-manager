@@ -28,6 +28,12 @@ async function syncHistory() {
   } catch(e) { console.warn('syncHistory:',e?.message||String(e)); setSyncBadge('오류','bad'); }
 }
 
+async function verifyAdminPin(pin) {
+  var res = await db.rpc('verify_admin_pin', { p_club_id: CLUB_ID, p_pin: pin });
+  if(res.error) throw res.error;
+  return res.data === true;
+}
+
 async function updateClubSettings(currentPin, newName, newPin) {
   var res = await db.rpc('update_club_settings', {
     p_club_id: CLUB_ID,
@@ -99,15 +105,14 @@ function startRealtimeLive() {
 async function loadFromSupabase() {
   setSyncBadge('동기화 중','warn');
   try {
-    // 클럽 정보 먼저 로드 (PIN 포함)
-    var cr = await db.from('clubs').select('name,admin_pin').eq('club_id',CLUB_ID).maybeSingle();
+    // 클럽 정보 먼저 로드 (PIN은 브라우저로 내려오지 않음 — verify_admin_pin RPC로 확인)
+    var cr = await db.from('clubs').select('name').eq('club_id',CLUB_ID).maybeSingle();
     if(cr.error) throw cr.error;
     if(!cr.data) {
       setSyncBadge('오류','bad');
       byId('data-msg').textContent = '동호회를 찾을 수 없어요. ID를 확인해주세요.';
       return;
     }
-    ADMIN_PIN = cr.data.admin_pin;
     // 헤더 타이틀 업데이트
     var titleEl = document.querySelector('.header-title');
     if(titleEl) titleEl.textContent = cr.data.name;

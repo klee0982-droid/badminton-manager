@@ -36,8 +36,16 @@ function setAdminMsg(msg, type) {
   el.style.display = '';
   if(type==='ok') setTimeout(function(){ el.style.display='none'; }, 2000);
 }
-function adminLogin() {
-  if(byId('admin-pin').value===ADMIN_PIN) {
+async function adminLogin() {
+  var pin = byId('admin-pin').value;
+  if(!pin) { byId('admin-pin').focus(); return; }
+  var btn = byId('admin-login-btn');
+  btn.disabled = true;
+  var ok = false;
+  try { ok = await verifyAdminPin(pin); }
+  catch(e) { console.warn('adminLogin:', e?.message||String(e)); setAdminMsg('연결 오류. 다시 시도해주세요', 'err'); btn.disabled = false; return; }
+  btn.disabled = false;
+  if(ok) {
     isAdmin=true; sessionStorage.setItem('bdm_admin_ok','1'); byId('admin-pin').value='';
     renderAdmin(); renderManage();
     setAdminMsg('관리자 모드 활성화', 'ok');

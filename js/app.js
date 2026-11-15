@@ -379,7 +379,6 @@ async function saveClubSettings() {
   try {
     var ok = await updateClubSettings(currentPin, name, newPin);
     if(ok) {
-      ADMIN_PIN = newPin;
       var titleEl = document.querySelector('.header-title');
       if(titleEl) titleEl.textContent = name;
       document.title = name + ' · 배드민턴 매니저';

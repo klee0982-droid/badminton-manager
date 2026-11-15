@@ -120,6 +120,7 @@
     var SUPABASE_URL = 'https://hvvxequwyjqbgxmnavbz.supabase.co';
     var SUPABASE_KEY = 'sb_publishable_1Tmj2oW-SGR5KcnVbbq-iA_JEW_QmPb';
     var db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    function escH(v){ return String(v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
     document.getElementById('club-search-btn').addEventListener('click', async function() {
       var q = document.getElementById('club-search-input').value.trim();
       if(!q) return;
@@ -128,13 +129,13 @@
       // ID로 먼저 시도, 없으면 이름으로 검색
       var res = await db.from('clubs').select('club_id,name').eq('club_id', q).maybeSingle();
       if(res.data) {
-        result.innerHTML = '✓ <strong>'+res.data.name+'</strong> 동호회를 찾았어요! <a href="/club/'+res.data.club_id+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
+        result.innerHTML = '✓ <strong>'+escH(res.data.name)+'</strong> 동호회를 찾았어요! <a href="/club/'+encodeURIComponent(res.data.club_id)+'" style="color:var(--accent);font-weight:700">바로 접속 →</a>';
         result.style.color = 'var(--accent)';
       } else {
         var nameRes = await db.from('clubs').select('club_id,name').ilike('name', '%'+q+'%').limit(5);
         if(nameRes.data && nameRes.data.length) {
           result.innerHTML = nameRes.data.map(function(c){
-            return '✓ <strong>'+c.name+'</strong> <a href="/club/'+c.club_id+'" style="color:var(--accent);font-weight:700">접속 →</a>';
+            return '✓ <strong>'+escH(c.name)+'</strong> <a href="/club/'+encodeURIComponent(c.club_id)+'" style="color:var(--accent);font-weight:700">접속 →</a>';
           }).join('<br>');
           result.style.color = 'var(--accent)';
         } else {

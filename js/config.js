@@ -2,7 +2,6 @@ var SUPABASE_URL = 'https://hvvxequwyjqbgxmnavbz.supabase.co';
 var SUPABASE_KEY = 'sb_publishable_1Tmj2oW-SGR5KcnVbbq-iA_JEW_QmPb';
 var _cp = window.location.pathname.match(/^\/club\/([^/]+)/);
 var CLUB_ID      = new URLSearchParams(window.location.search).get('club') || (_cp && _cp[1]) || '';
-var ADMIN_PIN    = ''; // clubs 테이블에서 로드됨
 var STORAGE_KEY  = 'bdm_members_backup';
 var HISTORY_KEY  = 'bdm_history_backup';
 var COURT_NAMES  = Array.from({length:20},function(_,i){return (i+1)+'코트';});
