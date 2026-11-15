@@ -47,14 +47,16 @@ async function adminLogin() {
   btn.disabled = false;
   if(ok) {
     isAdmin=true; sessionStorage.setItem('bdm_admin_ok','1'); byId('admin-pin').value='';
+    try { sessionStorage.setItem('bdm_admin_pin', pin); } catch(e) {} // 공동 운영 저장(save_session)에 필요
     renderAdmin(); renderManage();
     setAdminMsg('관리자 모드 활성화', 'ok');
+    if(typeof syncInit === 'function') syncInit();
   } else {
     setAdminMsg('PIN이 틀렸습니다', 'err');
     byId('admin-pin').value=''; byId('admin-pin').focus();
   }
 }
-function adminLogout() { isAdmin=false; sessionStorage.removeItem('bdm_admin_ok'); renderAdmin(); renderManage(); }
+function adminLogout() { isAdmin=false; sessionStorage.removeItem('bdm_admin_ok'); try { sessionStorage.removeItem('bdm_admin_pin'); } catch(e) {} if(typeof _sync!=='undefined') _sync.ready=false; renderAdmin(); renderManage(); }
 
 // ── 코트 설정 ──
 function renderCourtConfig() {

@@ -99,6 +99,7 @@ function startRealtimeLive() {
     }, function(payload) {
       _lastLiveState = (payload.new || {}).game_state || null;
       renderLiveView(_lastLiveState);
+      if(typeof onRemoteGameState === 'function') onRemoteGameState(payload.new); // 다른 관리자 변경
     })
     .subscribe();
 }
