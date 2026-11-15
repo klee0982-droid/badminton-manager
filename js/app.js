@@ -189,19 +189,31 @@ function discardAndReset() { if(!requireAdmin())return; saveSession('기록만 �
 function addGuest() {
   if(!requireAdmin()) return;
   var nameEl = byId('guest-name');
-  var baseName = (nameEl && nameEl.value.trim()) || '게스트';
-  var finalName = baseName;
-  var suffix = 2;
-  while(members.some(function(m){ return norm(m.name)===norm(finalName); })) {
-    finalName = baseName + suffix++;
-  }
+  var typed = (nameEl && nameEl.value.trim()).replace(/\s*\(게스트\)\s*$/, '');
+  // 이름 뒤에 (게스트) 표시 — 코트·현황·호출 문구·기록 어디서나 구분되게
+  function guestLabel(n) { return typed ? typed + (n > 1 ? n : '') + ' (게스트)' : '게스트' + (n > 1 ? n : ''); }
+  var suffix = 1, finalName = guestLabel(suffix);
+  while(members.some(function(m){ return norm(m.name)===norm(finalName); })) finalName = guestLabel(++suffix);
+  var eloEl = byId('guest-elo');
+  var elo = Math.max(100, Math.min(3000, Number(eloEl && eloEl.value) || 1000));
   var newId = nextMemberId++;
-  members.push({id:newId, name:finalName, elo:1000, gender:_guestGender, isGuest:true});
+  members.push({id:newId, name:finalName, elo:elo, gender:_guestGender, isGuest:true});
   present.add(newId);
   if(nameEl) nameEl.value='';
+  if(eloEl) { eloEl.value = 1000; renderGuestTierBtns(); }
   byId('guest-form').style.display='none';
   renderAttend(); renderManage();
-  showMsg('"'+finalName+'" 게스트 추가!','info');
+  showMsg('"'+finalName+'" 게스트 추가! (ELO '+elo+')','info');
+}
+// 게스트 등급 빠른 선택: 등급 중간값으로 ELO 채움
+var GUEST_TIER_ELO = { 'E급':750, 'D급':900, 'C급':1100, 'B급':1350, 'A급':1600 };
+function renderGuestTierBtns() {
+  var wrap = byId('guest-tier-btns'); if(!wrap) return;
+  var cur = getTier(Number(byId('guest-elo').value) || 1000).l;
+  wrap.innerHTML = TIERS.map(function(t){
+    var on = t.l === cur;
+    return '<button type="button" class="tier" data-guest-tier="'+t.l+'" style="border:1.5px solid '+(on?t.tc:'transparent')+';background:'+t.bg+';color:'+t.tc+';cursor:pointer;padding:5px 9px;font-size:11px">'+t.l+'</button>';
+  }).join('');
 }
 function toggleGenderBalance() {
   genderBalanceEnabled = !genderBalanceEnabled;
@@ -458,6 +470,13 @@ function bind() {
   byId('gender-balance-btn').addEventListener('click',toggleGenderBalance);
   byId('guest-show-btn').addEventListener('click',function(){byId('guest-form').style.display='';byId('guest-name').focus();});
   byId('guest-cancel-btn').addEventListener('click',function(){byId('guest-form').style.display='none';});
+  renderGuestTierBtns();
+  byId('guest-tier-btns').addEventListener('click',function(e){
+    var b=e.target.closest('[data-guest-tier]'); if(!b) return;
+    byId('guest-elo').value=GUEST_TIER_ELO[b.getAttribute('data-guest-tier')]; renderGuestTierBtns();
+  });
+  byId('guest-elo').addEventListener('input',renderGuestTierBtns);
+  byId('guest-elo').addEventListener('keydown',function(e){if(e.key==='Enter')addGuest();});
   byId('guest-add-btn').addEventListener('click',addGuest);
   byId('guest-name').addEventListener('keydown',function(e){if(e.key==='Enter')addGuest();});
   byId('guest-m-btn').addEventListener('click',function(){

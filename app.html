@@ -159,9 +159,17 @@
           <input type="text" id="guest-name" placeholder="이름 (선택)" style="flex:1;min-width:100px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);outline:none" />
           <button id="guest-m-btn" class="btn" style="padding:8px 14px;background:var(--accent);color:#fff;border-color:var(--accent)">남</button>
           <button id="guest-f-btn" class="btn" style="padding:8px 14px">여</button>
-          <button id="guest-add-btn" class="btn primary" style="padding:8px 16px">추가</button>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <span style="font-size:12px;font-weight:700;color:var(--text2);margin-right:2px">오늘 ELO</span>
+          <input type="number" id="guest-elo" inputmode="numeric" value="1000" min="100" max="3000" step="10" aria-label="게스트 ELO" style="width:78px;border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:7px 8px;font-size:14px;font-weight:700;font-family:inherit;background:var(--surface);color:var(--text);outline:none;text-align:center" />
+          <span id="guest-tier-btns" style="display:flex;gap:4px;flex-wrap:wrap"></span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="guest-add-btn" class="btn primary" style="padding:8px 16px;flex:1">추가</button>
           <button id="guest-cancel-btn" class="btn ghost" style="padding:8px 12px">취소</button>
         </div>
+        <div style="font-size:11px;color:var(--text3);font-weight:500;margin-top:6px">게스트 ELO는 오늘 팀 배정에만 쓰이고 저장되지 않아요.</div>
       </div>
       <div class="search-wrap">
         <span style="font-size:14px">🔎</span>
