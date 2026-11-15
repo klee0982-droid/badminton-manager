@@ -37,12 +37,12 @@
 .ops-vs { font-size: 12px; font-weight: 800; color: var(--text3); }
 .ops-team { display: flex; flex-direction: column; gap: 4px; }
 .ops-pname { border: none; border-radius: 8px; padding: 8px 6px; font-size: 16px; font-weight: 800; letter-spacing: -0.02em; cursor: pointer; text-align: center; overflow-wrap: anywhere; }
-.ops-team.a .ops-pname { background: #e6f1fb; color: #134a82; }
-.ops-team.b .ops-pname { background: #faece7; color: #7a2f15; }
+.ops-team.a .ops-pname { background: #e3f3f1; color: #0f5d57; }
+.ops-team.b .ops-pname { background: #fbf1df; color: #7a5208; }
 .ops-result { display: flex; align-items: center; gap: 6px; }
 .ops-win { flex: 1; border: none; border-radius: var(--radius-sm); padding: 12px 6px; font-size: 14px; font-weight: 800; cursor: pointer; color: #fff; }
-.ops-win.a { background: #185fa5; }
-.ops-win.b { background: #993c1d; }
+.ops-win.a { background: #0f766e; }
+.ops-win.b { background: #a16207; }
 .ops-win:active, .ops-assign:active, .ops-chip-main:active { transform: scale(.97); }
 .ops-score { width: 44px; text-align: center; font-size: 16px; font-weight: 800; border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 2px; background: var(--surface); color: var(--text); outline: none; }
 .ops-score:focus { border-color: var(--accent); }
@@ -56,7 +56,7 @@
 .ops-hint { font-size: 11px; font-weight: 500; color: var(--text3); }
 .ops-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
 .ops-chip { display: flex; border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); overflow: hidden; }
-.ops-chip.f { border-left: 4px solid #d06aa8; }
+
 .ops-chip.planned { background: var(--accent-light); border-color: var(--accent-mid); }
 .ops-chip.picked { background: var(--accent); border-color: var(--accent); }
 .ops-chip.picked .ops-chip-name, .ops-chip.picked .ops-chip-meta { color: #fff; }
@@ -121,3 +121,16 @@
 .ops-link { margin-left: auto; border: none; background: none; color: var(--accent); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
 .ops-lesson-scroll { max-height: 46vh; overflow-y: auto; }
 .ops-req-person small { font-size: 10px; font-weight: 600; opacity: .7; }
+
+/* 성별 표시: 남 파랑 / 여 빨강 — 운영 화면 전체 공통 */
+:root { --g-m: #2563c9; --g-f: #d6336c; }
+.ops-chip.gm { border-left: 4px solid var(--g-m); }
+.ops-chip.gf { border-left: 4px solid var(--g-f); }
+.ops-chip.picked.gm, .ops-chip.picked.gf { border-left-width: 4px; }
+.ops-pname.gm { box-shadow: inset 4px 0 0 var(--g-m); }
+.ops-pname.gf { box-shadow: inset 4px 0 0 var(--g-f); }
+.gn::before, .ops-req-person.gm::before, .ops-req-person.gf::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: 2px; }
+.gn.gm::before, .ops-req-person.gm::before { background: var(--g-m); }
+.gn.gf::before, .ops-req-person.gf::before { background: var(--g-f); }
+.ops-req-person.on::before { box-shadow: 0 0 0 1.5px #fff; }
+.ops-legend { display: inline-flex; gap: 8px; font-size: 11px; font-weight: 700; color: var(--text3); }

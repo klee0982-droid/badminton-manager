@@ -217,7 +217,7 @@ function opsCloseLesson() { byId('ops-lesson-overlay').style.display = 'none'; }
 function opsRenderLesson() {
   function btn(p, where) {
     var on = _opsLessonSel.indexOf(p.id) >= 0;
-    return '<button type="button" class="ops-req-person' + (on ? ' on' : '') + '" data-lesson-pick="' + p.id + '" data-name="' + esc(norm(p.name)) + '">' + esc(p.name) + (where ? ' <small>' + where + '</small>' : '') + '</button>';
+    return '<button type="button" class="ops-req-person ' + opsG(p) + (on ? ' on' : '') + '" data-lesson-pick="' + p.id + '" data-name="' + esc(norm(p.name)) + '">' + esc(p.name) + (where ? ' <small>' + where + '</small>' : '') + '</button>';
   }
   var onCourt = [];
   courts.slice(0, activeCourtCount).forEach(function(c, i){ if(c) c.teamA.concat(c.teamB).forEach(function(p){ onCourt.push(btn(p, (i + 1) + '코트')); }); });
@@ -289,7 +289,7 @@ function opsRenderRequest() {
     '<input type="text" class="ops-req-search" id="ops-req-search" placeholder="이름 검색">' +
     '<div class="ops-req-list" id="ops-req-list">' + others.map(function(m){
       var on = _opsReqWith.indexOf(m.id) >= 0;
-      return '<button type="button" class="ops-req-person' + (on ? ' on' : '') + '" data-req-with="' + m.id + '" data-name="' + esc(norm(m.name)) + '">' + esc(m.name) + '</button>';
+      return '<button type="button" class="ops-req-person ' + opsG(m) + (on ? ' on' : '') + '" data-req-with="' + m.id + '" data-name="' + esc(norm(m.name)) + '">' + esc(m.name) + '</button>';
     }).join('') + '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
       (cur ? '<button type="button" class="btn danger" data-req-clear>요청 해제</button>' : '') +
@@ -357,6 +357,8 @@ function opsSetCourts(n) {
 }
 
 // ── 호출 문구 ──
+function opsG(p) { return p.gender === 'F' ? 'gf' : 'gm'; } // 성별 표시: 남 파랑 / 여 빨강
+function opsNamesHtml(team) { return team.map(function(p){ return '<span class="gn ' + opsG(p) + '">' + esc(p.name) + '</span>'; }).join(' · '); }
 function opsNames(team) { return team.map(function(p){ return p.name; }).join(' · '); }
 function opsCourtText(i) {
   var c = courts[i];
@@ -410,7 +412,7 @@ function opsElapsed(c) {
 }
 function opsTeamHtml(team, i, side) {
   return '<div class="ops-team ' + side + '">' + team.map(function(p){
-    return '<button type="button" class="ops-pname" data-replace="' + i + ':' + p.id + '" title="탭해서 교체">' + esc(p.name) + '</button>';
+    return '<button type="button" class="ops-pname ' + opsG(p) + '" data-replace="' + i + ':' + p.id + '" title="탭해서 교체">' + esc(p.name) + '</button>';
   }).join('') + '</div>';
 }
 function opsCourtHtml(i, plan) {
@@ -504,7 +506,7 @@ function renderOps() {
       var a = makeAssignment(u.group);
       html += '<div class="ops-up' + (k === 0 ? ' first' : '') + '">' +
         '<span class="ops-up-n">' + (k + 1) + '</span>' +
-        '<div class="ops-up-body"><div class="ops-next-teams"><span>' + esc(opsNames(a.teamA)) + '</span><em>vs</em><span>' + esc(opsNames(a.teamB)) + '</span></div>' +
+        '<div class="ops-up-body"><div class="ops-next-teams"><span>' + opsNamesHtml(a.teamA) + '</span><em>vs</em><span>' + opsNamesHtml(a.teamB) + '</span></div>' +
         (k === 0 ? opsRequestNotes(u.group) : opsMetNotes(u.group)) + '</div>' +
         '<span class="ops-up-diff">Δ' + a.diff + '</span></div>';
     });
@@ -529,11 +531,12 @@ function renderOps() {
   var order = {};
   upcoming.forEach(function(u, k){ u.group.forEach(function(p){ order[p.id] = k + 1; }); });
   html += '<div class="ops-wait"><div class="ops-wait-hd"><span>⏳ 대기 ' + waitQueue.length + '명</span>' +
+    '<span class="ops-legend"><span class="gn gm">남</span><span class="gn gf">여</span></span>' +
     '<span class="ops-hint">이름 4명 선택 = 직접 조 짜기 · 🎯 = 남복/여복/혼복/같이 요청</span></div><div class="ops-chips">';
   html += waitQueue.map(function(p){
     var picked = _opsManual.indexOf(p.id) >= 0, planned = !picked && inPlan.indexOf(p.id) >= 0;
     var s = statOf(p.id), rest = restScore(p.id);
-    return '<div class="ops-chip' + (picked ? ' picked' : planned ? ' planned' : '') + (p.gender === 'F' ? ' f' : '') + '">' +
+    return '<div class="ops-chip' + (picked ? ' picked' : planned ? ' planned' : '') + ' ' + opsG(p) + '">' +
       '<button type="button" class="ops-chip-main" data-ops="pick" data-id="' + p.id + '">' +
         '<span class="ops-chip-name">' + esc(p.name) + '</span>' +
         '<span class="ops-chip-meta">' + s.played + '게임' + (order[p.id] ? ' · 다음 ' + order[p.id] + '번' : '') + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span>' +
@@ -546,13 +549,13 @@ function renderOps() {
     html += '<div class="ops-wait-hd" style="margin-top:12px"><span>📚 레슨 중 ' + lessonIds.length + '명</span><span class="ops-hint">눌러서 복귀</span>' +
       (lessonIds.length > 1 ? '<button type="button" class="ops-link" data-ops="lesson-return-all">모두 복귀</button>' : '') + '</div><div class="ops-chips">' +
       lessonIds.map(function(id){ return members.find(function(m){ return m.id === id; }); }).filter(Boolean).map(function(p){
-        return '<div class="ops-chip lesson"><button type="button" class="ops-chip-main" data-ops="lesson-return" data-id="' + p.id + '"><span class="ops-chip-name">' + esc(p.name) + '</span><span class="ops-chip-meta">' + statOf(p.id).played + '게임 · 복귀</span></button></div>';
+        return '<div class="ops-chip lesson ' + opsG(p) + '"><button type="button" class="ops-chip-main" data-ops="lesson-return" data-id="' + p.id + '"><span class="ops-chip-name">' + esc(p.name) + '</span><span class="ops-chip-meta">' + statOf(p.id).played + '게임 · 복귀</span></button></div>';
       }).join('') + '</div>';
   }
   if(pausedIds.length) {
     html += '<div class="ops-wait-hd" style="margin-top:12px"><span>💤 휴식 ' + pausedIds.length + '명</span><span class="ops-hint">눌러서 복귀</span></div><div class="ops-chips">' +
       pausedIds.map(function(id){ return members.find(function(m){ return m.id === id; }); }).filter(Boolean).map(function(p){
-        return '<div class="ops-chip paused"><button type="button" class="ops-chip-main" data-resume="' + p.id + '"><span class="ops-chip-name">' + esc(p.name) + '</span><span class="ops-chip-meta">복귀</span></button></div>';
+        return '<div class="ops-chip paused ' + opsG(p) + '"><button type="button" class="ops-chip-main" data-resume="' + p.id + '"><span class="ops-chip-name">' + esc(p.name) + '</span><span class="ops-chip-meta">복귀</span></button></div>';
       }).join('') + '</div>';
   }
   html += '</div>';
