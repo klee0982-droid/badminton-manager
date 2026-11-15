@@ -16,6 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/manager.css" />
 </head>
 <body>
   <!-- 온보딩 팝업 -->
@@ -98,6 +99,7 @@
     </div>
 
     <nav class="tab-bar">
+      <button class="tab" data-tab="ops">🏸 운영</button>
       <button class="tab active" data-tab="attend">출석</button>
       <button class="tab" data-tab="live">현황</button>
       <button class="tab" data-tab="play">진행</button>
@@ -107,6 +109,15 @@
       <button class="tab" data-tab="tourney">시합</button>
       <button class="tab" data-tab="data">데이터</button>
     </nav>
+
+    <!-- 운영 (관리자 코트 컨트롤) -->
+    <section id="tab-ops" class="section">
+      <div class="section-header">
+        <div class="section-title">코트 운영</div>
+        <div class="section-desc">다음 조 준비 · 결과 기록 · 호출을 한 화면에서</div>
+      </div>
+      <div id="ops-main"></div>
+    </section>
 
     <!-- 출석 -->
     <section id="tab-attend" class="section active">
@@ -395,6 +406,7 @@
     </section>
 
     <div class="test-status" id="test-status"></div>
+    <div class="ops-toast" id="ops-toast" role="status" hidden></div>
   </div>
 
   <!-- JS: 순서 중요! -->
@@ -406,5 +418,6 @@
   <script src="/js/ui.js"></script>
   <script src="/js/tournament.js"></script>
   <script src="/js/app.js"></script>
+  <script src="/js/manager.js"></script>
 </body>
 </html>

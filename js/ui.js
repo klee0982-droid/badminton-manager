@@ -57,6 +57,8 @@ function renderCourtConfig() {
 }
 function setActiveCourtCount(n) {
   if(!requireAdmin()) return;
+  // 게임 진행 중에는 세션을 지우지 않고 코트만 늘리거나 줄인다
+  if(typeof opsSetCourts==='function' && opsStarted()) { opsSetCourts(Number(n)||1); return; }
   activeCourtCount=Math.max(1,Math.min(MAX_COURTS,Number(n)||1));
   localStorage.setItem('bdm_active_court_count',String(activeCourtCount));
   courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[];
@@ -67,12 +69,13 @@ function setActiveCourtCount(n) {
 
 // ── 탭 이동 ──
 function gotoTab(tab) {
-  ['attend','live','play','result','members','player','tourney','data'].forEach(function(id){ byId('tab-'+id).classList.toggle('active',id===tab); });
+  ['ops','attend','live','play','result','members','player','tourney','data'].forEach(function(id){ byId('tab-'+id).classList.toggle('active',id===tab); });
   document.querySelectorAll('.tab').forEach(function(btn){ btn.classList.toggle('active',btn.getAttribute('data-tab')===tab); });
   if(tab==='data') renderData();
   if(tab==='player') renderPlayerSearch();
   if(tab==='tourney') renderTourneySection();
   if(tab==='live') startLivePolling(); else stopLivePolling();
+  if(tab==='ops' && typeof renderOps==='function') renderOps();
 }
 
 // ── 출석 ──

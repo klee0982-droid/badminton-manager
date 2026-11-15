@@ -111,6 +111,25 @@ function selectFairGroup(cands) {
   groups.forEach(function(g){var s=scoreGroup(g);if(s<score){best=g;score=s;}});
   return best;
 }
+// 같은 후보군을 점수순으로 정렬해 상위 n개 반환 (운영 뷰의 '다른 조합'용)
+function rankFairGroups(cands, n) {
+  if(cands.length<4) return [];
+  var first = selectFairGroup(cands);
+  if(!first) return [];
+  var minPlayed = Math.min.apply(null, cands.map(function(p){return statOf(p.id).played;}));
+  var pool = cands.slice().sort(function(a,b){
+    var pd = statOf(a.id).played - statOf(b.id).played;
+    if(pd!==0) return pd;
+    return restScore(b.id) - restScore(a.id);
+  }).slice(0, 10);
+  var seen = {}, out = [];
+  function key(g){ return g.map(function(p){return p.id;}).sort(function(a,b){return a-b;}).join('-'); }
+  seen[key(first)] = true; out.push(first);
+  combinations(pool,4).map(function(g){return {g:g,s:scoreGroup(g)};})
+    .sort(function(a,b){return a.s-b.s;})
+    .forEach(function(x){ if(out.length<n && !seen[key(x.g)]){ seen[key(x.g)]=true; out.push(x.g); } });
+  return out;
+}
 function makeAssignment(players) {
   var p=players.slice().sort(function(a,b){return b.elo-a.elo;});
   var best=null, bestScore=Infinity;
@@ -133,4 +152,4 @@ function makeAssignment(players) {
   return best;
 }
 function removeSelected(g) { var ids=new Set(g.map(function(p){return p.id;})); waitQueue=waitQueue.filter(function(p){return !ids.has(p.id);}); }
-function assignNext(i) { if(waitQueue.length<4){courts[i]=null;return false;} var g=selectFairGroup(waitQueue); if(!g){courts[i]=null;return false;} removeSelected(g); courts[i]=makeAssignment(g); return true; }
+function assignNext(i) { if(waitQueue.length<4){courts[i]=null;return false;} var g=selectFairGroup(waitQueue); if(!g){courts[i]=null;return false;} removeSelected(g); courts[i]=makeAssignment(g); if(courts[i]) courts[i].startedAt=Date.now(); return true; }

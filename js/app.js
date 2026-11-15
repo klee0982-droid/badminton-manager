@@ -73,7 +73,9 @@ function confirmSwap(courtIdx, leavingId, candidateId) {
     .concat([cand]);
   waitQueue = waitQueue.filter(function(p){return p.id!==candidateId;});
   waitQueue.unshift(leaving);
+  var startedAt = c.startedAt;
   courts[courtIdx] = makeAssignment(newPlayers);
+  if(courts[courtIdx]) courts[courtIdx].startedAt = startedAt || Date.now();
   closeSwapPopup();
   renderPlay(); renderAttend();
   showMsg(leaving.name+' → '+cand.name+' 교체 ('+leaving.name+' 대기열 1순위)','info');
@@ -115,6 +117,12 @@ function courtFinished(i) {
   var sa=parseInt(byId('sa-'+i).value,10)||0,sb=parseInt(byId('sb-'+i).value,10)||0;
   if(sa===0&&sb===0&&!confirm('0:0으로 기록할까요?')) return;
   if(sa===sb&&sa!==0&&!confirm('동점('+sa+':'+sb+')으로 기록할까요?')) return;
+  recordCourtResult(i,sa,sb);
+  updateCourtCard(i); updateWaitSection(); renderAttend(); saveGameState();
+}
+// 코트 결과 기록 (진행 탭 · 운영 탭 공용)
+function recordCourtResult(i,sa,sb) {
+  var c=courts[i]; if(!c) return;
   var ch=calcElo(c.teamA,c.teamB,sa,sb);
   currentSessionSaved=false;
   gameLog.push({courtName:COURT_NAMES[i],teamA:c.teamA.slice(),teamB:c.teamB.slice(),scoreA:sa,scoreB:sb,deltaA:ch.deltaA,deltaB:ch.deltaB,expectedA:ch.expectedA,margin:ch.margin,kA:ch.kA,kB:ch.kB});
@@ -125,7 +133,6 @@ function courtFinished(i) {
   recordPairings(c.teamA, c.teamB);
   waitQueue.push.apply(waitQueue,played);
   courts[i]=null;
-  updateCourtCard(i); updateWaitSection(); renderAttend(); saveGameState();
 }
 function finishDay() {
   if(!gameLog.length){showMsg('기록된 게임이 없습니다.','warn');return;}
