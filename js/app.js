@@ -16,6 +16,7 @@ var currentSessionSaved = false, selectedPlayerId = null;
 var nextMemberId = Math.max.apply(null, members.map(function(m){return m.id;}).concat([0])) + 1;
 var selectedForDelete = new Set();
 var partnerHistory = {}, opponentHistory = {};
+var playRequests = {}; // 선수별 요청 {type:'MD'|'WD'|'XD'|'WITH', with:[id], held:n} — 1게임 사용 후 소멸
 
 // ── 코트/대기 관리 ──
 function pauseFromWait(id) {
@@ -92,7 +93,7 @@ function assignSingleCourt(i) {
 // ── 게임 흐름 ──
 function resetAll() {
   if(!requireAdmin())return;
-  present.clear(); courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  present.clear(); courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false; playRequests={};
   leftEarly.clear();
   members = members.filter(function(m){ return !m.isGuest; });
   _tStep=0; _td={}; _tView=tourneys.length?tourneys[tourneys.length-1].id:null;
@@ -103,7 +104,7 @@ function resetAll() {
 function startGame() {
   if(!requireAdmin())return;
   if(present.size<4){showMsg('최소 4명이 필요합니다.');return;}
-  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false;
+  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; currentSessionSaved=false; playRequests={};
   leftEarly.clear();
   var pool=members.filter(function(m){return present.has(m.id);}).sort(function(a,b){return b.elo-a.elo;});
   ensureStats(pool.map(function(p){return p.id;})); waitQueue=pool.slice();

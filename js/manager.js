@@ -36,6 +36,7 @@ function opsSnapshot() {
     opponentHistory: opponentHistory,
     activeCourtCount: activeCourtCount,
     currentSessionSaved: currentSessionSaved,
+    playRequests: playRequests,
     guests: members.filter(function(m){ return m.isGuest; }).map(opsPlayer)
   }));
 }
@@ -56,6 +57,7 @@ function opsApplySnapshot(s) {
   gameLog = s.gameLog; eloDeltas = s.eloDeltas; sessionStats = s.sessionStats; turn = s.turn;
   partnerHistory = s.partnerHistory; opponentHistory = s.opponentHistory;
   activeCourtCount = s.activeCourtCount; currentSessionSaved = s.currentSessionSaved;
+  playRequests = s.playRequests || {};
   renderCourtConfig();
 }
 
@@ -117,9 +119,11 @@ function opsAssign(i) {
   removeSelected(plan.group);
   courts[i] = makeAssignment(plan.group);
   courts[i].startedAt = Date.now();
+  var met = plan.group.filter(function(p){ var r = activeRequest(p); return r && requestSatisfied(r, plan.group); });
+  noteGroupAssigned(plan.group);
   _opsManual = []; _opsPick = 0;
   renderPlay(); renderAttend(); saveGameState(); renderOps();
-  opsToast(COURT_NAMES[i] + ' 배정 완료 · 📢로 호출', true);
+  opsToast(COURT_NAMES[i] + ' 배정 완료' + (met.length ? ' · 🎯 ' + met.map(function(p){ return p.name; }).join(', ') + ' 요청 반영' : '') + ' · 📢로 호출', true);
 }
 
 // ── 결과 기록 ──
@@ -140,6 +144,83 @@ function opsFinish(i, winner) {
   delete _opsScores[i];
   renderPlay(); renderAttend(); saveGameState(); renderOps();
   opsToast(COURT_NAMES[i] + ' ' + sa + ':' + sb + ' 기록됨', true);
+}
+
+// ── 요청 설정 시트 ──
+var _opsReqFor = null, _opsReqWith = [];
+function opsReqLabel(p) {
+  var r = activeRequest(p); if(!r) return '';
+  if(r.type === 'WITH') return '🤝 ' + r.with.map(function(id){ var m = members.find(function(x){ return x.id === id; }); return m ? m.name : '?'; }).join(', ');
+  return '🎯 ' + REQUEST_TYPES[r.type];
+}
+function opsOpenRequest(id) {
+  _opsReqFor = members.find(function(m){ return m.id === Number(id); }); if(!_opsReqFor) return;
+  var cur = playRequests[_opsReqFor.id];
+  _opsReqWith = cur && cur.type === 'WITH' ? cur.with.slice() : [];
+  opsRenderRequest();
+  byId('ops-req-overlay').style.display = 'flex';
+}
+function opsCloseRequest() { byId('ops-req-overlay').style.display = 'none'; _opsReqFor = null; }
+function opsRenderRequest() {
+  var p = _opsReqFor, cur = playRequests[p.id];
+  var types = p.gender === 'F' ? ['WD', 'XD'] : ['MD', 'XD'];
+  var others = members.filter(function(m){ return present.has(m.id) && m.id !== p.id; }).sort(function(a, b){ return a.name.localeCompare(b.name, 'ko'); });
+  byId('ops-req-sheet').innerHTML =
+    '<div class="swap-title">' + esc(p.name) + ' 요청</div>' +
+    '<div class="swap-sub">요청을 위해 최대 ' + REQUEST_MAX_HOLD + '번의 코트 배정까지 양보하고, 그 뒤엔 일반 게임에 들어가요. 한 게임 하면 요청은 사라져요.</div>' +
+    '<div class="ops-req-types">' + types.map(function(t){
+      return '<button type="button" class="ops-req-type' + (cur && cur.type === t ? ' on' : '') + '" data-req-type="' + t + '">' + REQUEST_TYPES[t] + '</button>';
+    }).join('') + '</div>' +
+    '<div class="ops-req-sub">🤝 같이 칠 사람 <span>(최대 3명 · 같은 게임, 팀은 자동)</span></div>' +
+    '<input type="text" class="ops-req-search" id="ops-req-search" placeholder="이름 검색">' +
+    '<div class="ops-req-list" id="ops-req-list">' + others.map(function(m){
+      var on = _opsReqWith.indexOf(m.id) >= 0;
+      return '<button type="button" class="ops-req-person' + (on ? ' on' : '') + '" data-req-with="' + m.id + '" data-name="' + esc(norm(m.name)) + '">' + esc(m.name) + '</button>';
+    }).join('') + '</div>' +
+    '<div class="btn-row" style="margin-top:12px">' +
+      (cur ? '<button type="button" class="btn danger" data-req-clear>요청 해제</button>' : '') +
+      '<button type="button" class="btn primary" data-req-with-save style="flex:1"' + (_opsReqWith.length ? '' : ' disabled') + '>같이 칠 사람 저장 (' + _opsReqWith.length + ')</button>' +
+    '</div>' +
+    '<button type="button" class="swap-cancel" data-req-close>닫기</button>';
+}
+function opsSetRequest(r) {
+  if(!requireAdmin()) return;
+  var p = _opsReqFor;
+  if(r) playRequests[p.id] = Object.assign({ held:0 }, r); else delete playRequests[p.id];
+  _opsManual = []; _opsPick = 0;
+  opsCloseRequest();
+  opsPersist(); renderOps();
+  opsToast(r ? p.name + ' — ' + (r.type === 'WITH' ? '같이 칠 사람' : REQUEST_TYPES[r.type]) + ' 요청 등록' : p.name + ' 요청 해제');
+}
+function opsBindRequest() {
+  var ov = document.createElement('div');
+  ov.className = 'swap-overlay'; ov.id = 'ops-req-overlay'; ov.style.display = 'none';
+  ov.innerHTML = '<div class="swap-sheet" id="ops-req-sheet"></div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){
+    if(e.target === ov || e.target.closest('[data-req-close]')) return opsCloseRequest();
+    var t = e.target.closest('[data-req-type]');
+    if(t) return opsSetRequest({ type: t.getAttribute('data-req-type') });
+    var w = e.target.closest('[data-req-with]');
+    if(w) {
+      var id = Number(w.getAttribute('data-req-with')), at = _opsReqWith.indexOf(id);
+      if(at >= 0) _opsReqWith.splice(at, 1);
+      else if(_opsReqWith.length < 3) _opsReqWith.push(id);
+      else return opsToast('3명까지 고를 수 있어요');
+      var q = byId('ops-req-search').value;
+      opsRenderRequest(); byId('ops-req-search').value = q; opsFilterReqList();
+      return;
+    }
+    if(e.target.closest('[data-req-with-save]')) return opsSetRequest({ type:'WITH', with:_opsReqWith.slice() });
+    if(e.target.closest('[data-req-clear]')) return opsSetRequest(null);
+  });
+  ov.addEventListener('input', function(e){ if(e.target.id === 'ops-req-search') opsFilterReqList(); });
+}
+function opsFilterReqList() {
+  var q = norm(byId('ops-req-search').value);
+  document.querySelectorAll('#ops-req-list [data-req-with]').forEach(function(b){
+    b.hidden = !!q && b.getAttribute('data-name').indexOf(q) < 0 && !b.classList.contains('on');
+  });
 }
 
 // ── 코트 수 (진행 중 세션 유지) ──
@@ -239,6 +320,21 @@ function opsCourtHtml(i, plan) {
       '<button type="button" class="ops-win b" data-ops="win" data-i="' + i + '" data-side="b">B 승</button>' +
     '</div></div>';
 }
+function opsRequestNotes(group) {
+  var notes = [];
+  group.forEach(function(p){
+    var r = activeRequest(p);
+    if(r && requestSatisfied(r, group)) notes.push('<span class="ops-note ok">🎯 ' + esc(p.name) + ' ' + (r.type === 'WITH' ? '같이 칠 사람' : REQUEST_TYPES[r.type]) + ' 요청 반영</span>');
+    else if(r) notes.push('<span class="ops-note warn">' + esc(p.name) + ' 요청 대기 한도 끝 → 일반 게임</span>');
+  });
+  var minP = Math.min.apply(null, group.map(function(p){ return statOf(p.id).played; }));
+  waitQueue.forEach(function(p){
+    var r = activeRequest(p);
+    if(r && group.indexOf(p) < 0 && statOf(p.id).played <= minP)
+      notes.push('<span class="ops-note hold">⏳ ' + esc(p.name) + ' ' + (r.type === 'WITH' ? '같이 칠 사람' : REQUEST_TYPES[r.type]) + ' 기다리는 중 (양보 ' + r.held + '/' + REQUEST_MAX_HOLD + ')</span>');
+  });
+  return notes.length ? '<div class="ops-notes">' + notes.join('') + '</div>' : '';
+}
 function opsStepperInner() {
   return '<button type="button" data-ops="courts" data-n="' + (activeCourtCount - 1) + '"' + (activeCourtCount <= 1 ? ' disabled' : '') + ' aria-label="코트 줄이기">−</button>' +
     '<span>' + activeCourtCount + '코트</span>' +
@@ -283,6 +379,7 @@ function renderOps() {
     var tag = plan.manual ? '직접 구성' : '추천 ' + (plan.idx + 1) + '/' + plan.total;
     html += '<div class="ops-next-hd"><span>⏭ 다음 게임</span><span class="ops-tag">' + tag + '</span><span class="ops-diff">팀 차이 Δ' + asg.diff + '</span></div>' +
       '<div class="ops-next-teams"><span>' + esc(opsNames(asg.teamA)) + '</span><em>vs</em><span>' + esc(opsNames(asg.teamB)) + '</span></div>' +
+      opsRequestNotes(plan.group) +
       '<div class="ops-next-actions">' +
         (plan.manual
           ? '<button type="button" class="btn" data-ops="clear-manual">선택 해제</button>'
@@ -302,14 +399,16 @@ function renderOps() {
   // 대기 / 휴식
   var inPlan = plan ? plan.group.map(function(p){ return p.id; }) : [];
   html += '<div class="ops-wait"><div class="ops-wait-hd"><span>⏳ 대기 ' + waitQueue.length + '명</span>' +
-    '<span class="ops-hint">이름을 눌러 4명을 고르면 직접 조를 짤 수 있어요</span></div><div class="ops-chips">';
+    '<span class="ops-hint">이름 4명 선택 = 직접 조 짜기 · 🎯 = 남복/여복/혼복/같이 요청</span></div><div class="ops-chips">';
   html += waitQueue.map(function(p){
     var picked = _opsManual.indexOf(p.id) >= 0, planned = !picked && inPlan.indexOf(p.id) >= 0;
     var s = statOf(p.id), rest = restScore(p.id);
     return '<div class="ops-chip' + (picked ? ' picked' : planned ? ' planned' : '') + (p.gender === 'F' ? ' f' : '') + '">' +
       '<button type="button" class="ops-chip-main" data-ops="pick" data-id="' + p.id + '">' +
         '<span class="ops-chip-name">' + esc(p.name) + '</span>' +
-        '<span class="ops-chip-meta">' + s.played + '게임' + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span></button>' +
+        '<span class="ops-chip-meta">' + s.played + '게임' + (rest > activeCourtCount + 1 ? ' · 오래 대기' : '') + '</span>' +
+        (opsReqLabel(p) ? '<span class="ops-chip-req">' + esc(opsReqLabel(p)) + '</span>' : '') + '</button>' +
+      '<button type="button" class="ops-chip-rest" data-ops="req" data-id="' + p.id + '" title="요청 (남복/여복/혼복/같이)">🎯</button>' +
       '<button type="button" class="ops-chip-rest" data-pause-wait="' + p.id + '" title="휴식">💤</button></div>';
   }).join('') || '<div class="ops-empty-note">대기자 없음</div>';
   html += '</div>';
@@ -353,6 +452,7 @@ function opsBind() {
     else if(act === 'copy-all') opsCopy(opsAllText(), '전체 현황 복사됨');
     else if(act === 'cycle') opsCyclePlan();
     else if(act === 'pick') opsToggleManual(b.getAttribute('data-id'));
+    else if(act === 'req') opsOpenRequest(b.getAttribute('data-id'));
     else if(act === 'clear-manual') { _opsManual = []; renderOps(); }
     else if(act === 'courts') opsSetCourts(Number(b.getAttribute('data-n')));
     else if(act === 'undo') opsUndo();
@@ -383,6 +483,7 @@ function opsHook(name) {
 }
 function opsInit() {
   opsBind();
+  opsBindRequest();
   var restored = opsRestore();
   ['renderAttend', 'updateWaitSection', 'renderPlay', 'renderAdmin'].forEach(opsHook);
   // Supabase 로드(이미 진행 중)가 멤버 목록을 덮어써도 복구된 게스트가 사라지지 않게

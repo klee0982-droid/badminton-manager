@@ -8,6 +8,8 @@ var COURT_NAMES  = Array.from({length:20},function(_,i){return (i+1)+'코트';})
 var MAX_COURTS   = 20;
 var BEGINNER_ELO = 1000;
 var ADVANCED_ELO = 1400;
+var REQUEST_MAX_HOLD = 2; // 요청 때문에 최대 몇 번의 코트 배정까지 양보(대기)할 수 있는지
+var REQUEST_TYPES = { MD:'남복', WD:'여복', XD:'혼복', WITH:'같이' };
 
 var TIERS = [
   { l: 'E급', min: 100,  max: 799,  bg: '#F1EFE8', tc: '#5F5E5A' },

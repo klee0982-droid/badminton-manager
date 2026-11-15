@@ -69,7 +69,7 @@ function setActiveCourtCount(n) {
   if(typeof opsSetCourts==='function' && opsStarted()) { opsSetCourts(Number(n)||1); return; }
   activeCourtCount=Math.max(1,Math.min(MAX_COURTS,Number(n)||1));
   localStorage.setItem('bdm_active_court_count',String(activeCourtCount));
-  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[];
+  courts=new Array(MAX_COURTS).fill(null); waitQueue=[]; gameLog=[]; eloDeltas={}; sessionStats={}; turn=0; partnerHistory={}; opponentHistory={}; pausedIds=[]; playRequests={};
   byId('play-main').style.display='none'; byId('play-empty').style.display='';
   byId('result-main').style.display='none'; byId('result-empty').style.display='';
   renderCourtConfig(); renderAttend();
